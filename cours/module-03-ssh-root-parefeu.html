@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 03 — Sécuriser SSH, les comptes et le pare-feu : clé SSH, désactivation de la connexion directe de root, comptes de déploiement sans sudo, règles nftables en IPv4 et IPv6.">
+  <meta name="color-scheme" content="light">
+  <title>Module 03 — Sécuriser SSH, les comptes et le pare-feu · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Durcir SSH</a>
+        <a href="#etape-4">Pare-feu</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 03 · Réduire la surface d'attaque</p>
+      <h1 id="titre">Sécuriser SSH, les comptes et le pare-feu</h1>
+      <p class="lead">
+        Un serveur neuf accepte souvent un mot de passe et parfois une connexion
+        directe de <code>root</code>. Ce module passe à l'authentification par clé,
+        crée les comptes qui déploieront les applications, et ferme tout le reste
+        avec un pare-feu qui filtre IPv4 <em>et</em> IPv6.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 03</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Risque d'enfermement</span> lisez la procédure de retour arrière</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 02</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Le risque réel de ce module : perdre l'accès au serveur.</strong> Toute
+        modification de SSH ou du pare-feu se fait <strong>avec une seconde session déjà
+        ouverte</strong> et, idéalement, avec la console de secours de l'hébergeur à portée de
+        main. Ne fermez jamais la session qui fonctionne avant d'avoir validé la nouvelle.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Valeurs fictives.</strong> <code>admin@192.0.2.10</code> et le port
+        <code>22</code> sont des exemples (RFC&nbsp;5737). Adaptez-les à votre machine ; si
+        votre hébergeur fournit un port SSH différent, ne le fermez pas par erreur.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 03">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Passer à la clé SSH</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Durcir sshd sans se couper l'accès</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Comptes de déploiement et d'exécution</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Écrire le pare-feu nftables</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Vérifier en IPv4 et en IPv6</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, l'accès au serveur est nominatif et chiffré, les comptes
+              applicatifs existent, et seuls SSH, HTTP et HTTPS sont joignables depuis Internet.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Authentifier</strong> l'administrateur par clé, sans mot de passe.</span></li>
+            <li><span><strong>Désactiver</strong> la connexion SSH directe de <code>root</code>, après vérification.</span></li>
+            <li><span><strong>Créer</strong> les comptes <code>deploy-*</code> (déploiement, sans <code>sudo</code>) et <code>svc-*</code> (exécution, sans connexion).</span></li>
+            <li><span><strong>Filtrer</strong> le réseau avec nftables, en IPv4 comme en IPv6.</span></li>
+            <li><span><strong>Documenter</strong> le retour arrière avant d'appliquer quoi que ce soit.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Pourquoi séparer déployer et exécuter&nbsp;?</strong> Le compte qui écrit les
+            fichiers n'est pas celui qui fait tourner le service. Une faille dans l'application
+            ne donne donc pas le droit de modifier son propre code.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Le module 02 doit être terminé.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Le compte administrateur nominatif fonctionne et <code>sudo</code> est validé.</span></li>
+            <li><span>Vous disposez d'un client SSH sur votre poste local (<code>ssh -V</code> répond).</span></li>
+            <li><span>La <strong>console de secours</strong> de l'hébergeur est ouverte dans un onglet&nbsp;: c'est votre seul retour si le pare-feu se referme.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Notez votre configuration actuelle avant de la modifier.</strong> Un
+            <code>cp</code> de sauvegarde et une copie de <code>sudo nft list ruleset</code> dans
+            un fichier local vous éviteront bien des sueurs.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — clé SSH                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Passer à l'authentification par clé</h2>
+            <p><strong>Objectif&nbsp;:</strong> se connecter sans mot de passe, avec une clé qui ne quitte jamais le poste local.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> générez une paire de clés <em>sur votre poste local</em>.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">utilisateur : vous</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-keygen">Copier</button>
+            <pre id="cmd03-keygen">ssh-keygen -t ed25519 -C "poste-local-admin"</pre>
+          </div>
+
+          <p>
+            <code>ssh-keygen</code> crée <strong>deux</strong> fichiers&nbsp;: une clé
+            <em>privée</em> (qui reste chez vous, protégée par une phrase secrète) et une clé
+            <em>publique</em> (<code>.pub</code>) qui, elle, peut être copiée sur le serveur.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> installez la clé publique sur le serveur.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">modifie le serveur</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-copyid">Copier</button>
+            <pre id="cmd03-copyid">ssh-copy-id -i ~/.ssh/id_ed25519.pub admin@192.0.2.10</pre>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>N'exécutez jamais un bloc copié dans ce module sans l'avoir compris.</strong>
+            Le retour arrière de cette étape consiste simplement à supprimer la ligne ajoutée par
+            <code>ssh-copy-id</code> dans <code>~/.ssh/authorized_keys</code> du compte concerné.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> testez explicitement l'authentification par clé,
+              sans mot de passe&nbsp;:
+              <code>ssh -o PreferredAuthentications=publickey admin@192.0.2.10 whoami</code>
+              doit afficher <code>admin</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Permission denied (publickey)</code>
+              signifie que la clé publique n'a pas atteint <code>authorized_keys</code> ou que les
+              droits du dossier <code>~/.ssh</code> sont trop ouverts&nbsp;: sur le serveur,
+              <code>chmod 700 ~/.ssh</code> et <code>chmod 600 ~/.ssh/authorized_keys</code>.
+              <code>ssh-copy-id: command not found</code>&nbsp;: le paquet
+              <code>openssh-client</code> est incomplet sur votre poste.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — durcir sshd                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Durcir sshd sans se couper l'accès</h2>
+            <p><strong>Objectif&nbsp;:</strong> interdire la connexion directe de <code>root</code> et l'authentification par mot de passe.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> lisez d'abord la configuration <em>effective</em>, puis sauvegardez-la.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-sshd-lire">Copier</button>
+            <pre id="cmd03-sshd-lire">sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication|pubkeyauthentication'
+sudo cp -a /etc/ssh/sshd_config /etc/ssh/sshd_config.avant-durcissement</pre>
+          </div>
+
+          <p>
+            <code>sshd -T</code> affiche la configuration <strong>réellement appliquée</strong>,
+            après fusion de tous les fichiers inclus&nbsp;: bien plus fiable qu'une lecture du
+            fichier, où une directive peut être commentée puis redéfinie ailleurs.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> éditez la configuration, puis testez-la <em>avant</em> de recharger.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-sshd-config">Copier</button>
+            <pre id="cmd03-sshd-config">sudoedit /etc/ssh/sshd_config</pre>
+          </div>
+
+          <p>Les trois directives à obtenir explicitement&nbsp;:</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-sshd-directives">Copier</button>
+            <pre id="cmd03-sshd-directives">PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-sshd-apply">Copier</button>
+            <pre id="cmd03-sshd-apply">sudo sshd -t
+sudo systemctl reload ssh</pre>
+          </div>
+
+          <p>
+            <code>sshd -t</code> valide la syntaxe <strong>sans rien appliquer</strong>&nbsp;: s'il
+            ne dit rien, la configuration est acceptée. Le <code>reload</code> (et non
+            <code>restart</code>) ne coupe pas les sessions déjà établies.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> ouvrez une <strong>nouvelle</strong> session avec
+              votre clé. Elle doit fonctionner. Puis vérifiez
+              <code>sudo sshd -T</code> filtré sur
+              <code>permitrootlogin</code> et <code>passwordauthentication</code>&nbsp;: les
+              valeurs doivent être <code>no</code>.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Retour arrière.</strong> Si la nouvelle session ne s'ouvre plus, utilisez la
+            session encore ouverte (ou la console de secours) pour restaurer&nbsp;:
+            <code>sudo cp -a /etc/ssh/sshd_config.avant-durcissement /etc/ssh/sshd_config</code> puis
+            <code>sudo systemctl reload ssh</code>.
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Bad configuration option</code> ou
+              <code>line N: Bad yes/no argument</code> vient de <code>sshd -t</code>&nbsp;: corrigez la
+              ligne indiquée avant de recharger. Un <code>reload</code> refusé laisse la
+              configuration précédente en place&nbsp;: vous n'avez rien perdu.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — comptes de déploiement                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Comptes de déploiement et d'exécution</h2>
+            <p><strong>Objectif&nbsp;:</strong> créer trois paires de comptes séparées, sans aucun droit d'administration.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez les comptes de l'application A (React + Express).</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-comptes">Copier</button>
+            <pre id="cmd03-comptes">sudo groupadd reactapp
+sudo adduser --disabled-password --gecos "" deploy-react
+sudo adduser --system --no-create-home --shell /usr/sbin/nologin --ingroup reactapp svc-react
+sudo usermod -aG reactapp deploy-react</pre>
+          </div>
+
+          <p>
+            <code>deploy-react</code> déploie&nbsp;: il garde un shell interactif et des permissions
+            limitées à <code>/srv/apps/react-app</code>. <code>svc-react</code> exécute&nbsp;: aucun
+            shell (<code>nologin</code>), aucune clé SSH. Les deux partagent le groupe
+            <code>reactapp</code>.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> répétez pour les deux autres applications.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-comptes-reste">Copier</button>
+            <pre id="cmd03-comptes-reste">sudo groupadd phpapp
+sudo adduser --disabled-password --gecos "" deploy-php
+sudo adduser --system --no-create-home --shell /usr/sbin/nologin --ingroup phpapp svc-php
+sudo usermod -aG phpapp deploy-php
+
+sudo groupadd pythonapp
+sudo adduser --disabled-password --gecos "" deploy-python
+sudo adduser --system --no-create-home --shell /usr/sbin/nologin --ingroup pythonapp svc-python
+sudo usermod -aG pythonapp deploy-python</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-comptes-verif">Copier</button>
+            <pre id="cmd03-comptes-verif">id deploy-react
+sudo -l -U deploy-react
+getent group reactapp phpapp pythonapp</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>id deploy-react</code> liste
+              <code>reactapp</code> mais <strong>pas</strong> <code>sudo</code>.
+              <code>sudo -l -U deploy-react</code> ne doit proposer aucune commande. Installez
+              ensuite une clé <strong>distincte</strong> par compte de déploiement, avec
+              <code>ssh-copy-id</code> — jamais la même clé partout.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>group reactapp already exists</code> est
+              sans gravité, le groupe est déjà créé. <code>user already exists</code> de même.
+              Retour arrière d'un compte&nbsp;: <code>sudo deluser --remove-home deploy-react</code>
+              (le compte de déploiement n'a pas de fichiers système).</p>
+          </div>
+
+          <div class="callout">
+            <strong>Limite à connaître.</strong> Trois comptes séparés réduisent les risques, mais
+            <strong>ne constituent pas une isolation complète</strong>&nbsp;: sans conteneur ni
+            machine virtuelle, une compromission de <code>root</code> atteint les trois
+            applications.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — pare-feu                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Écrire le pare-feu nftables</h2>
+            <p><strong>Objectif&nbsp;:</strong> ne laisser entrer que SSH, HTTP et HTTPS — en IPv4 comme en IPv6.</p>
+          </div>
+
+          <p>
+            nftables est le pare-feu natif de Debian. Une <strong>table <code>inet</code></strong>
+            traite les deux familles d'adresses dans un seul jeu de règles&nbsp;: impossible
+            d'oublier IPv6.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> écrivez le fichier de règles, sauvegardez-le, puis
+            vérifiez sa syntaxe <em>sans l'appliquer</em>.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-nft-backup">Copier</button>
+            <pre id="cmd03-nft-backup">sudo cp -a /etc/nftables.conf /etc/nftables.conf.avant-durcissement
+sudo nft list ruleset | tee ~/nft-avant.txt</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-nft-conf">Copier</button>
+            <pre id="cmd03-nft-conf">sudoedit /etc/nftables.conf</pre>
+          </div>
+
+          <p>Contenu à écrire (adaptez le port SSH si le vôtre diffère)&nbsp;:</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-nft-regles">Copier</button>
+            <pre id="cmd03-nft-regles">#!/usr/sbin/nft -f
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    iif "lo" accept
+    ct state established,related accept
+    ct state invalid drop
+
+    ip protocol icmp accept
+    ip6 nexthdr ipv6-icmp accept
+
+    tcp dport 22 accept
+    tcp dport { 80, 443 } accept
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+}</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-nft-apply">Copier</button>
+            <pre id="cmd03-nft-apply">sudo nft -c -f /etc/nftables.conf
+sudo systemctl enable --now nftables
+sudo nft list ruleset</pre>
+          </div>
+
+          <p>
+            Chaque ligne compte&nbsp;: <code>policy drop</code> refuse par défaut, donc tout ce qui
+            n'est pas explicitement accepté est bloqué. <code>iif "lo"</code> laisse passer la
+            boucle locale, <code>ct state established,related</code> autorise les réponses aux
+            connexions déjà ouvertes — sans quoi votre session SSH mourrait au premier paquet
+            sortant.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>sudo nft -c -f</code> doit rester muet
+              (syntaxe correcte). Après application, <code>sudo nft list ruleset</code> montre la
+              table <code>inet filter</code>, et votre session SSH tient toujours.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Retour arrière.</strong> Si vous perdez SSH, reconnectez-vous par la console de
+            secours de l'hébergeur puis exécutez&nbsp;: <code>sudo nft flush ruleset</code>
+            (vide les règles en mémoire) et <code>sudo systemctl disable nftables</code> (empêche
+            leur retour au prochain démarrage). Vous pourrez ensuite corriger le fichier.
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une erreur de syntaxe signalée par
+              <code>nft -c</code> empêche l'application&nbsp;: corrigez la ligne indiquée, rien
+              n'a été chargé. Si vous avez modifié le port SSH dans <code>sshd_config</code> sans
+              adapter <code>tcp dport</code>, vous vous enfermez dehors&nbsp;: gardez toujours la
+              console de secours accessible.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — vérifier IPv4/IPv6                                -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Vérifier en IPv4 et en IPv6</h2>
+            <p><strong>Objectif&nbsp;:</strong> s'assurer qu'aucun service interne n'est joignable, quelle que soit la famille d'adresses.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> relevez ce qui écoute réellement.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-ecoute">Copier</button>
+            <pre id="cmd03-ecoute">ss -lntup
+ip -br address
+ip -6 addr</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> comparez avec ce que le pare-feu autorise.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd03-nft-verif">Copier</button>
+            <pre id="cmd03-nft-verif">sudo nft list ruleset
+sudo nft list chain inet filter input</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> seuls <code>22</code>, <code>80</code> et
+              <code>443</code> sont ouverts. Les services internes (base de données,
+              administration, ports applicatifs) n'apparaissent <em>pas</em> sur une interface
+              publique, ni en IPv4 ni en IPv6.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Le piège classique.</strong> Un service qui écoute sur <code>::</code> est
+            joignable en IPv6 <em>même si</em> une règle IPv4 le bloque. Fermer un port en IPv4
+            ne protège donc pas&nbsp;: vérifiez <strong>toujours</strong> les deux familles avec
+            <code>ss -lntup</code>.
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si un service apparaît sur une adresse
+            publique, il n'a pas été lié à la boucle locale. Cela se corrige dans sa configuration,
+            pas dans le pare-feu&nbsp;: c'est l'objet des modules 05 et 06.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>Permission denied (publickey)</code></th>
+                  <td>Clé absente de <code>authorized_keys</code>, ou droits trop ouverts sur <code>~/.ssh</code></td>
+                  <td>Vérifiez le contenu et les droits&nbsp;: <code>700</code> sur le dossier, <code>600</code> sur le fichier</td>
+                </tr>
+                <tr>
+                  <th scope="row">SSH répond mais la session se ferme après le pare-feu</th>
+                  <td>Le trafic sortant établi n'est pas autorisé</td>
+                  <td>Vérifiez la règle <code>ct state established,related accept</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Impossible de se reconnecter après activation du pare-feu</th>
+                  <td>Le port SSH réel n'est pas celui autorisé</td>
+                  <td>Console de secours, <code>sudo nft flush ruleset</code>, puis corrigez <code>tcp dport</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Une page web reste inaccessible depuis l'extérieur</th>
+                  <td>Rien n'écoute encore sur <code>80</code>/<code>443</code>, ou IPv6 seule est filtrée</td>
+                  <td>Module 05 pour l'installation&nbsp;; vérifiez les deux familles avec <code>ss -lntup</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>useradd: group 'phpapp' does not exist</code></th>
+                  <td>L'ordre des commandes a été inversé</td>
+                  <td>Créez le groupe <code>groupadd</code> <em>avant</em> <code>adduser --ingroup</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Un service refuse de démarrer sous <code>svc-*</code></th>
+                  <td>Le shell <code>nologin</code> est bien volontaire&nbsp;: le compte ne doit pas ouvrir de session</td>
+                  <td>Un service n'a pas besoin de shell&nbsp;: c'est le rôle de <code>User=</code> dans systemd (module 06)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les sept points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>L'authentification par clé fonctionne pour le compte administrateur nominatif.</span></li>
+            <li><span><code>sshd -T</code> confirme <code>permitrootlogin no</code> et <code>passwordauthentication no</code>.</span></li>
+            <li><span>Une sauvegarde de <code>sshd_config</code> et du règles précédentes existe.</span></li>
+            <li><span>Les six comptes <code>deploy-*</code> et <code>svc-*</code> existent, avec une clé <strong>distincte</strong> par compte de déploiement.</span></li>
+            <li><span><code>sudo -l -U</code> ne donne aucun droit d'administration aux comptes de déploiement.</span></li>
+            <li><span>Le pare-feu n'est actif que sur <code>22</code>, <code>80</code> et <code>443</code>, en IPv4 et en IPv6.</span></li>
+            <li><span>La procédure de retour arrière est écrite et testée (console de secours accessible).</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 04 rattache les noms de domaine au serveur
+            et choisit un mode d'accès distant — utile surtout en serveur à domicile, derrière une
+            box.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 03</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S20</td><td>Manuel OpenSSH — <code>sshd_config</code>, durcissement</td><td><code>https://www.openssh.com/manual.html</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S4</td><td>Wiki Debian — nftables (pare-feu natif)</td><td><code>https://wiki.debian.org/nftables</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S19</td><td>OWASP Cheat Sheet Series — bonnes pratiques</td><td><code>https://cheatsheetseries.owasp.org/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S1</td><td>Console et réseau d'un hébergeur (exemple)</td><td><code>https://docs.ovhcloud.com/fr/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S22</td><td>RFC 1918 — adresses privées</td><td><code>https://www.rfc-editor.org/rfc/rfc1918</code></td><td>HTTP 200 — consultée</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un serveur réel.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("03");
+  </script>
+</body>
+</html>

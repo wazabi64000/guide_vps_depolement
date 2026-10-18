@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 04 — Configurer le réseau, les domaines et l'accès distant : interfaces, routes, enregistrements A/AAAA/CNAME, sous-domaines, diagnostic DNS et choix d'un accès distant.">
+  <meta name="color-scheme" content="light">
+  <title>Module 04 — Configurer le réseau, les domaines et l'accès distant · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">DNS</a>
+        <a href="#etape-4">Accès distant</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 04 · Faire le lien entre un nom et une machine</p>
+      <h1 id="titre">Configurer le réseau, les domaines et l'accès distant</h1>
+      <p class="lead">
+        Une adresse IP change, un nom ne change pas. Ce module lit la configuration
+        réseau du serveur, rattache trois sous-domaines, puis choisit un moyen d'atteindre
+        la machine depuis l'extérieur — selon que vous êtes sur un VPS ou derrière une box.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 04</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Lecture seule</span> aucune modification du serveur</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 01 + un domaine</span>
+      </div>
+      <div class="callout callout--warn">
+        <strong>Valeurs fictives.</strong> <code>192.0.2.10</code>, <code>2001:db8::10</code>,
+        <code>192.0.2.53</code> et <code>app-react.exemple.fr</code> sont des valeurs réservées à
+        la documentation (RFC&nbsp;5737, RFC&nbsp;3849, RFC&nbsp;2606). Remplacez-les par vos
+        valeurs réelles.
+      </div>
+      <div class="callout">
+        <strong>Aucune sortie réelle.</strong> Les résultats affichés sont <em>décrits</em>. Ce que
+        vous verrez dépend de votre offre, de votre box et de votre zone DNS.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 04">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Lire le réseau du serveur</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Comprendre A, AAAA et CNAME</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Rattacher les trois sous-domaines</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Choisir un mode d'accès distant</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Diagnostiquer une résolution DNS</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, trois sous-domaines désignent votre serveur, et vous savez
+              diagnostiquer une résolution DNS incorrecte.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Lire</strong> les interfaces, les routes et les ports en écoute.</span></li>
+            <li><span><strong>Distinguer</strong> un enregistrement <code>A</code>, <code>AAAA</code> et <code>CNAME</code>.</span></li>
+            <li><span><strong>Rattacher</strong> <code>app-react</code>, <code>app-php</code> et <code>app-python</code> à votre serveur.</span></li>
+            <li><span><strong>Choisir</strong> un mode d'accès distant adapté à votre situation.</span></li>
+            <li><span><strong>Diagnostiquer</strong> un nom qui ne pointe pas au bon endroit.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Un nom de domaine, à quoi ça sert&nbsp;?</strong> À obtenir un certificat HTTPS
+            valide et à garder la même adresse pour vos utilisateurs, même si l'adresse IP change.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Ce module suppose deux choses.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Vous connaissez l'adresse IP de votre serveur (module 01).</span></li>
+            <li><span>Vous avez un <strong>nom de domaine</strong> et l'accès à l'interface de sa zone DNS.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Serveur à domicile&nbsp;?</strong> Si l'adresse de votre box est privée
+            (<code>192.168.0.0/16</code>, <code>10.0.0.0/8</code> ou <code>172.16.0.0/12</code>),
+            un enregistrement <code>A</code> public ne peut pas la désigner&nbsp;: l'étape 4 traite
+            ce cas.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — lire le réseau                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Lire le réseau du serveur</h2>
+            <p><strong>Objectif&nbsp;:</strong> savoir quelles adresses le serveur porte réellement, et où va son trafic.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> relevez adresses, routes et ports.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd04-ip">Copier</button>
+            <pre id="cmd04-ip">ip -br address
+ip route
+ip -6 route
+ss -lntup</pre>
+          </div>
+
+          <p>
+            <code>ip -br address</code> liste vos interfaces en une ligne chacune&nbsp;:
+            <code>lo</code> (boucle locale), l'interface publique, et éventuellement une interface
+            privée. <code>ip route</code> et <code>ip -6 route</code> montrent la passerelle par
+            défaut, une par famille d'adresses.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> vous savez nommer votre interface publique, son
+              adresse IPv4, son éventuelle adresse IPv6, et la passerelle associée. Notez-les&nbsp;:
+              ce sont les valeurs que vous reporterez dans votre zone DNS.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>ip</code> introuvable sur votre poste
+              local est normal sous Windows ou macOS&nbsp;: ces commandes s'exécutent <em>sur le
+              serveur</em>. Pas d'adresse IPv6 affichée&nbsp;: votre offre n'en fournit pas —
+              notez-le comme une limite de l'environnement (module&nbsp;02 du référentiel), sans en
+              déduire que le serveur est protégé.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — A, AAAA, CNAME                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Comprendre A, AAAA et CNAME</h2>
+            <p><strong>Objectif&nbsp;:</strong> savoir quel type d'enregistrement créer, et pourquoi.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Types d'enregistrements DNS utilisés dans ce cours</caption>
+              <thead>
+                <tr><th scope="col">Type</th><th scope="col">Contient</th><th scope="col">Exemple</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row"><code>A</code></th><td>une adresse <strong>IPv4</strong></td><td><code>app-react.exemple.fr</code> → <code>192.0.2.10</code></td></tr>
+                <tr><th scope="row"><code>AAAA</code></th><td>une adresse <strong>IPv6</strong></td><td><code>app-react.exemple.fr</code> → <code>2001:db8::10</code></td></tr>
+                <tr><th scope="row"><code>CNAME</code></th><td>un <strong>autre nom</strong> (alias)</td><td><code>www.exemple.fr</code> → <code>exemple.fr</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Un nom peut porter <strong>à la fois</strong> un <code>A</code> et un <code>AAAA</code>&nbsp;:
+            le navigateur choisit la famille qu'il préfère. C'est précisément pour cela que le
+            serveur doit être correctement filtré dans <em>les deux</em> familles.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> vous savez dire pourquoi on crée un
+              <code>A</code> (l'adresse IPv4 du serveur) et un <code>AAAA</code> (son adresse IPv6),
+              et pourquoi un <code>CNAME</code> ne se place pas à côté d'un <code>A</code> sur le
+              même nom.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> un <code>CNAME</code> et un <code>A</code> sur
+              le <strong>même</strong> nom entrent en conflit&nbsp;: la zone est invalide et
+              l'interface du fournisseur refuse l'enregistrement. Utilisez un <code>CNAME</code>
+              pour un <em>alias</em>, pas pour le nom principal.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — sous-domaines                                     -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Rattacher les trois sous-domaines</h2>
+            <p><strong>Objectif&nbsp;:</strong> que chaque application ait son propre nom.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> dans l'interface de votre zone DNS, créez six
+            enregistrements (un <code>A</code> et, si vous avez IPv6, un <code>AAAA</code> par
+            nom).</p>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Les trois sous-domaines à créer</caption>
+              <thead>
+                <tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">Valeur</th><th scope="col">Application</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row"><code>app-react.exemple.fr</code></th><td><code>A</code> + <code>AAAA</code></td><td><code>192.0.2.10</code> · <code>2001:db8::10</code></td><td>A — React + Express</td></tr>
+                <tr><th scope="row"><code>app-php.exemple.fr</code></th><td><code>A</code> + <code>AAAA</code></td><td>mêmes adresses</td><td>B — PHP + PDO</td></tr>
+                <tr><th scope="row"><code>app-python.exemple.fr</code></th><td><code>A</code> + <code>AAAA</code></td><td>mêmes adresses</td><td>C — FastAPI + Uvicorn</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> vérifiez la propagation <em>depuis votre poste local</em>.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd04-virgule">Copier</button>
+            <pre id="cmd04-virgule">getent hosts app-react.exemple.fr
+getent hosts app-php.exemple.fr
+getent hosts app-python.exemple.fr</pre>
+          </div>
+
+          <p>
+            Le <code>TTL</code> (durée de vie) de chaque enregistrement décide du temps de
+            propagation&nbsp;: gardez une valeur courte (par exemple <code>300</code> secondes)
+            pendant la mise en place, vous pourrez l'augmenter ensuite.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les trois commandes renvoient l'adresse de votre
+              serveur. Si un <code>AAAA</code> existe, la même vérification doit montrer une adresse
+              IPv6.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>getent</code> ne renvoie rien tant que la
+              zone n'est pas publiée&nbsp;: attendez le TTL, videz le cache local si votre système
+              en a un, puis réessayez. Une faute de frappe dans le sous-domaine crée un nom qui
+              n'existe pas&nbsp;: recopiez-le depuis votre tableau, jamais de mémoire.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — accès distant                                     -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Choisir un mode d'accès distant</h2>
+            <p><strong>Objectif&nbsp;:</strong> décider, par ordre de sécurité, comment la machine sera joignable.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Modes d'accès distant, du plus sûr au plus exposé</caption>
+              <thead>
+                <tr><th scope="col">Mode</th><th scope="col">Quand l'utiliser</th><th scope="col">Ce qu'il implique</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">1. Réseau local seulement</th><td>Le plus sûr&nbsp;: aucun port publié</td><td>Accessible uniquement depuis chez vous</td></tr>
+                <tr><th scope="row">2. VPN (ex. WireGuard)</th><td>Vous voulez y accéder de partout, sans rien publier</td><td>Un tunnel&nbsp;: le serveur se comporte comme s'il était local</td></tr>
+                <tr><th scope="row">3. Publication web</th><td>Vous voulez un vrai site public</td><td>Redirection de port, DNS, HTTPS, pare-feu&nbsp;: tout doit être vérifié</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> sur un serveur à domicile, déterminez si vous êtes
+            derrière un partage d'adresse (CGNAT).</p>
+          <p><span class="tag">Poste local</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd04-cgnat">Copier</button>
+            <pre id="cmd04-cgnat">ip -br address</pre>
+          </div>
+
+          <p>
+            Si l'adresse publique que vous <em>voyez depuis Internet</em> n'est pas celle de votre
+            box, votre opérateur partage une adresse&nbsp;: la plage concernée est
+            <code>100.64.0.0/10</code> (RFC&nbsp;6598). Dans ce cas, la redirection de port IPv4 est
+            souvent impossible&nbsp;: préférez l'option 2 (VPN) ou une IPv6 correctement filtrée.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> le mode d'accès est <strong>choisi et
+              écrit</strong>. Pour un serveur à domicile, vous savez dire si vous êtes derrière un
+              CGNAT, et vous avez une solution de repli si la redirection de port est indisponible.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ce qui ne doit jamais être publié.</strong> La base de données, l'outil
+            d'administration SQL et les ports internes des applications. La publication web ne
+            concerne que <code>80</code> et <code>443</code> (module&nbsp;03).
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — diagnostic DNS                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Diagnostiquer une résolution DNS</h2>
+            <p><strong>Objectif&nbsp;:</strong> en cas de problème, savoir à quelle étape la chaîne casse.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> interrogez successivement votre résolveur, puis un autre.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd04-dig">Copier</button>
+            <pre id="cmd04-dig">cat /etc/resolv.conf
+getent hosts app-react.exemple.fr
+dig +short A app-react.exemple.fr
+dig +short AAAA app-react.exemple.fr
+dig app-react.exemple.fr @192.0.2.53</pre>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>Prérequis de cette vérification&nbsp;:</strong> <code>dig</code> vient d'un
+              paquet à installer sur votre poste (sous Debian, nommez-le <code>bind9-dnsutils</code>
+              ou <code>dnsutils</code> selon la version — vérifiez avec
+              <code>apt-cache search</code>). <code>getent</code> et <code>cat</code> sont, eux,
+              toujours disponibles.</p>
+          </div>
+
+          <p>
+            <code>/etc/resolv.conf</code> montre quel résolveur votre machine interroge. Le second
+            argument de <code>dig</code> (ici <code>192.0.2.53</code>, une adresse de test)
+            interroge <strong>un autre résolveur</strong>&nbsp;: si la réponse diffère, le problème
+            vient de la propagation ou du cache, pas de votre zone.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les réponses sont <strong>identiques</strong>
+              quel que soit le résolveur interrogé, et celles de <code>A</code> et
+              <code>AAAA</code> correspondent aux adresses du serveur.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> trois résultats se distinguent nettement.
+              <code>NXDOMAIN</code>&nbsp;: le nom n'existe pas (faute de frappe ou enregistrement
+              absent). Une adresse inattendue&nbsp;: l'enregistrement pointe ailleurs (ancienne IP,
+              serveur web de l'hébergeur). Un délai puis <code>no servers could be reached</code>&nbsp;:
+              c'est votre <em>résolveur</em> qui ne répond pas, pas la zone.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Le nom renvoie une autre adresse</th>
+                  <td>Enregistrement créé avant un changement d'IP, ou TTL long encore en cache</td>
+                  <td>Corrigez l'enregistrement, attendez le TTL, interrogez un autre résolveur</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le nom résout mais le site ne répond pas</th>
+                  <td>Ce n'est plus un problème DNS&nbsp;: rien n'écoute encore sur <code>80</code>/<code>443</code></td>
+                  <td>Ce point est traité aux modules 05 et 07</td>
+                </tr>
+                <tr>
+                  <th scope="row">Fonctionne en IPv4, échoue en IPv6</th>
+                  <td>Enregistrement <code>AAAA</code> absent, faux, ou IPv6 filtrée</td>
+                  <td>Vérifiez <code>dig +short AAAA</code> et le pare-feu (module&nbsp;03)</td>
+                </tr>
+                <tr>
+                  <th scope="row">Redirection de port impossible sur la box</th>
+                  <td>Adresse partagée par l'opérateur (CGNAT, plage <code>100.64.0.0/10</code>)</td>
+                  <td>Passez au VPN, ou utilisez une IPv6 correctement filtrée</td>
+                </tr>
+                <tr>
+                  <th scope="row">La zone DNS refuse l'enregistrement</th>
+                  <td><code>CNAME</code> en conflit avec un <code>A</code> sur le même nom</td>
+                  <td>Un seul type par nom&nbsp;: utilisez <code>CNAME</code> pour un alias</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le nom ne résout que sur certains réseaux</th>
+                  <td>Serveur DNS local filtrant, ou résolveur d'entreprise imposé</td>
+                  <td>Comparez avec un résolveur externe pour isoler la cause</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les six points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Vous savez nommer l'interface publique du serveur, son IPv4, son IPv6 et sa passerelle.</span></li>
+            <li><span>Les trois sous-domaines renvoient vers votre serveur.</span></li>
+            <li><span>Si IPv6 est disponible, un enregistrement <code>AAAA</code> existe pour chacun.</span></li>
+            <li><span>Le mode d'accès distant (local, VPN ou publication) est décidé et écrit.</span></li>
+            <li><span>Vous savez quelle commande exécuter pour prouver qu'un nom résout correctement.</span></li>
+            <li><span>Aucune base de données ni interface d'administration n'a été publiée sur Internet.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 05 installe la pile partagée&nbsp;: Nginx,
+            les runtimes, MariaDB liée à la boucle locale, et phpMyAdmin accessible uniquement par
+            tunnel SSH.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 04</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S22</td><td>RFC 1918 — adresses privées</td><td><code>https://www.rfc-editor.org/rfc/rfc1918</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S23</td><td>RFC 6598 — espace d'adressage partagé (CGNAT)</td><td><code>https://www.rfc-editor.org/rfc/rfc6598</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S25</td><td>RFC 3849 — préfixe IPv6 de documentation</td><td><code>https://www.rfc-editor.org/rfc/rfc3849</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S5e</td><td>Wiki Debian — configuration réseau</td><td><code>https://wiki.debian.org/NetworkConfiguration</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S26</td><td>WireGuard — exemple de tunnel VPN</td><td><code>https://www.wireguard.com/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S1</td><td>Console et réseau d'un hébergeur (exemple)</td><td><code>https://docs.ovhcloud.com/fr/</code></td><td>HTTP 200 — consultée</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un serveur réel.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("04");
+  </script>
+</body>
+</html>

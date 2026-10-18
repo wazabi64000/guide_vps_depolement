@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 12 — Réaliser le déploiement final des trois applications : rejouer le parcours, auditer ports, services et permissions, simuler un incident et restaurer le service, constituer le dossier technique de production et s'évaluer.">
+  <meta name="color-scheme" content="light">
+  <title>Module 12 — Réaliser le déploiement final des trois applications · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Audit</a>
+        <a href="#etape-3">Incident</a>
+        <a href="#etape-5">Évaluation</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 12 · Rendre le travail vérifiable</p>
+      <h1 id="titre">Réaliser le déploiement final des trois applications</h1>
+      <p class="lead">
+        Dernière étape&nbsp;: rejouer le parcours de bout en bout, auditer ce qui a été
+        construit, provoquer une panne pour vérifier qu'on sait la réparer, et laisser derrière
+        soi un dossier technique utilisable par quelqu'un d'autre.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 12</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Dernier module</span> synthèse et évaluation</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> modules 01 à 11</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Un serveur dont personne ne comprend la configuration est un serveur perdu.</strong>
+        Le livrable de ce module n'est pas «&nbsp;trois applications en ligne&nbsp;»&nbsp;: c'est
+        <strong>trois applications en ligne, plus de quoi les reconstruire sans vous</strong>.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Retour arrière prévu pour chaque action.</strong> Les commandes de ce module
+        modifient l'état du serveur&nbsp;: arrêt de service, bascule de version, restauration.
+        Elles sont toutes précédées de la sauvegarde correspondante, et suivies du contrôle qui
+        prouve que le service est revenu.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 12">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Rejouer le parcours dans l'ordre</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Audit final du serveur</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Simuler un incident et restaurer</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Constituer le dossier technique</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Évaluation finale</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale du parcours</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, les trois applications tournent avec domaines et HTTPS,
+              l'audit est passé, une panne a été provoquée et réparée, et quelqu'un d'autre
+              pourrait reprendre le serveur à partir de votre documentation.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Enchaîner</strong> les onze modules précédents sans en sauter un seul.</span></li>
+            <li><span><strong>Vérifier</strong> ports, services, permissions et secrets&nbsp;: ce qui écoute, et ce qui ne doit pas écouter.</span></li>
+            <li><span><strong>Provoquer</strong> une panne, la diagnostiquer, la réparer.</span></li>
+            <li><span><strong>Documenter</strong> l'architecture, les procédures et les chemins de reprise.</span></li>
+            <li><span><strong>Mesurer</strong> honnêtement ce que vous savez refaire seul, et ce qui reste flou.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Ce module est le seul dont l'objectif ne s'obtient pas en suivant des
+            commandes.</strong> Vous allez devoir produire un document, provoquer volontairement
+            un arrêt de service, et écrire ce que vous n'avez pas su faire. C'est la partie la
+            plus utile du parcours.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Ce module n'introduit aucune technologie nouvelle&nbsp;: il vérifie celles déjà vues.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Modules 01 à 11 parcourus&nbsp;: les deux premiers peuvent n'être que lus, mais à partir du module 03 les commandes doivent avoir été réellement exécutées.</span></li>
+            <li><span>Un serveur que <strong>vous</strong> administrez, et que vous acceptez de voir tomber quelques secondes.</span></li>
+            <li><span>Une sauvegarde récente des trois bases, avec une restauration déjà réussie (module 10).</span></li>
+            <li><span>De quoi écrire&nbsp;: un fichier texte suffit pour le dossier technique.</span></li>
+          </ul>
+          <div class="callout callout--danger">
+            <strong>N'exécutez ce module que sur un serveur dont vous êtes responsable.</strong>
+            Les étapes 2 et 3 arrêtent des services et restaurent des données. Sur un serveur qui
+            héberge déjà autre chose que vos trois applications d'apprentissage, la simulation
+            d'incident n'a rien à y faire.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — rejouer le parcours                               -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Rejouer le parcours dans l'ordre</h2>
+            <p><strong>Objectif&nbsp;:</strong> reconstruire la chaîne complète et repérer le maillon faible.</p>
+          </div>
+
+          <p>
+            Rejouez les étapes dans cet ordre, et cochez chaque livrable. Ce qui manque est
+            exactement ce qu'il faut refaire&nbsp;: un module «&nbsp;vu&nbsp;» n'est pas un module
+            «&nbsp;fait&nbsp;».
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Récapitulatif des onze modules précédents et de leur livrable</caption>
+              <thead>
+                <tr><th scope="col">Module</th><th scope="col">Ce qui doit exister</th><th scope="col">Le livrable</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">01</th><td>Décision d'hébergement</td><td>Un serveur accessible, une console de secours connue</td></tr>
+                <tr><th scope="row">02</th><td>Debian 13 à jour</td><td>Compte administrateur nominatif, paquets à jour</td></tr>
+                <tr><th scope="row">03</th><td>SSH durci, pare-feu actif</td><td>Connexion par clé, racine distante désactivée, IPv4 et IPv6 filtrées</td></tr>
+                <tr><th scope="row">04</th><td>Noms de domaine et résolution</td><td>Trois sous-domaines qui résolvent vers le serveur</td></tr>
+                <tr><th scope="row">05</th><td>Nginx, MariaDB, phpMyAdmin</td><td>Trois bases, six comptes SQL, administration SQL locale uniquement</td></tr>
+                <tr><th scope="row">06</th><td>Trois applications opérationnelles</td><td>Livraisons horodatées, lien <code>current</code>, services systemd</td></tr>
+                <tr><th scope="row">07</th><td>Domaines en HTTPS</td><td>Certificats valides, redirection HTTP vérifiée</td></tr>
+                <tr><th scope="row">08</th><td>Dépôts Git propres</td><td>Aucun secret dans l'historique, relecture avant intégration</td></tr>
+                <tr><th scope="row">09</th><td>Déploiement automatisé</td><td>Tests bloquants, livraison versionnée, retour arrière exercé</td></tr>
+                <tr><th scope="row">10</th><td>Sauvegardes automatiques</td><td>Extractions chiffrées hors serveur, restauration prouvée</td></tr>
+                <tr><th scope="row">11</th><td>Journaux exploitables</td><td>Journaux persistants, rotation en place, méthode de diagnostic</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les trois domaines répondent en HTTPS, les
+              trois bases contiennent des données, et <code>sudo systemctl --failed</code> ne
+              retourne rien. Si un point manque, terminez-le avant de continuer.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Ne recommencez pas tout pour «&nbsp;faire propre&nbsp;».</strong> Une
+            installation qui fonctionne et que vous comprenez vaut mieux qu'une réinstallation
+            parfaite que vous ne saurez pas expliquer. Réparez ce qui manque, gardez le reste.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — audit final                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Audit final du serveur</h2>
+            <p><strong>Objectif&nbsp;:</strong> vérifier que ce qui doit être fermé l'est, et que ce qui doit être ouvert fonctionne.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> confrontez ce qui écoute à ce qui devrait écouter.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-ecoutes">Copier</button>
+            <pre id="cmd12-ecoutes">sudo ss -lntup
+sudo nft list ruleset
+sudo systemctl --failed
+sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication|pubkeyauthentication'</pre>
+          </div>
+
+          <p>
+            Attendu&nbsp;: SSH, Nginx et rien d'autre en écoute publique. Express, Uvicorn,
+            MariaDB et phpMyAdmin n'écoutent que sur la boucle locale&nbsp;: ils ne doivent
+            apparaître qu'en <code>127.0.0.1</code>. Tout service applicatif visible sur une
+            adresse publique est une régression à corriger immédiatement.
+          </p>
+
+          <div class="callout callout--warn">
+            <strong>Un port fermé en IPv4 ne prouve rien.</strong> Comparez les deux familles
+            d'adresses dans la sortie de <code>ss</code>, et lisez <code>nft list ruleset</code>
+            en cherchant explicitement <code>ip</code> <em>et</em> <code>ip6</code>. Un service en
+            double pile reste joignable en IPv6 même si la règle IPv4 l'interdit.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> vérifiez les comptes, les permissions et les secrets.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-audit-comptes">Copier</button>
+            <pre id="cmd12-audit-comptes">sudo -l -U deploy-react
+ls -ld /srv/apps/*/releases /srv/apps/*/current
+sudo ls -l /srv/apps/*/shared/.env
+sudo find /srv/apps/*/current -name '.env' -o -name '*.pem' -o -name '*.key'</pre>
+          </div>
+
+          <p>
+            Attendu&nbsp;: <code>deploy-react</code> n'a <em>aucun</em> droit d'administration&nbsp;;
+            les dossiers d'application sont en <code>750</code>, propriété du compte de
+            déploiement et du groupe de l'application&nbsp;; chaque <code>.env</code> est en
+            <code>640</code> avec <code>root</code> comme propriétaire — donc lisible par le
+            service, non modifiable par lui. Et <strong>aucun secret</strong> ne traîne dans les
+            dossiers servis publiquement.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>Le contrôle qui compte le plus est le dernier.</strong> Un fichier
+            <code>.env</code> dans un dossier <code>public/</code> ou <code>dist/</code> est
+            téléchargeable par n'importe qui, sans mot de passe, à une URL devinable. Trouvez-le
+            ici&nbsp;: après une mise en ligne, il est trop tard.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> vérifiez l'état de la chaîne de mise à jour et des certificats.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-audit-systeme">Copier</button>
+            <pre id="cmd12-audit-systeme">sudo certbot certificates
+sudo certbot renew --dry-run
+sudo apt update
+apt list --upgradable
+journalctl --disk-usage
+df -h /
+timedatectl</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les certificats couvrent les trois domaines
+              avec une échéance lointaine, la simulation de renouvellement réussit, les mises à
+              jour de sécurité applicables sont identifiées, le disque garde une marge et l'heure
+              est synchronisée.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une liste de mises à jour à appliquer
+              n'est pas un incident&nbsp;: c'est la preuve que le suivi fonctionne. Ne redémarrez
+              pas le serveur sans avoir vérifié que vous disposez d'un accès de secours — la
+              console de l'hébergeur reste votre dernier recours.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — incident                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Simuler un incident et restaurer le service</h2>
+            <p><strong>Objectif&nbsp;:</strong> découvrir maintenant comment vous réagissez, plutôt que le jour du vrai incident.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Annoncez-le si quelqu'un d'autre utilise ce serveur.</strong> Cette
+            simulation rend une application inaccessible pendant quelques dizaines de secondes.
+            Sur un serveur partagé, prévenez avant — pas après.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> provoquez une panne franche, observez, réparez.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-panne">Copier</button>
+            <pre id="cmd12-panne">sudo systemctl stop app-react-api
+curl -sI https://app-react.exemple.fr/api/health | head -n 1
+sudo journalctl -u app-react-api -n 20 --no-pager
+sudo systemctl start app-react-api
+curl -s https://app-react.exemple.fr/api/health</pre>
+          </div>
+
+          <p>
+            Ce que vous devez avoir observé&nbsp;: le domaine répond toujours — Nginx, lui, n'est
+            pas tombé — mais l'API renvoie une erreur de passerelle, car la cible du proxy ne
+            répond plus. Le site statique reste accessible&nbsp;: un seul composant est en cause,
+            et le diagnostic se réduit à l'identifier.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> après <code>start</code>, le service est
+              <code>active (running)</code>, l'API répond de nouveau, et vous savez expliquer
+              <em>pourquoi</em> Nginx a renvoyé une erreur alors que Nginx n'était pas fautif.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si le service ne redémarre pas, lisez le
+              journal plutôt que de réessayer&nbsp;: la première ligne d'erreur explique presque
+              toujours la cause. <code>sudo systemctl status app-react-api</code> affiche les
+              dernières lignes même lorsque le service refuse de démarrer.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> exercez les deux autres reprises&nbsp;: retour arrière de version et restauration de données.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-reprise">Copier</button>
+            <pre id="cmd12-reprise">ls -1 /srv/apps/react-app/releases
+ssh deploiement-react "ln -sfn /srv/apps/react-app/releases/20261017-1010 /srv/apps/react-app/current"
+ssh deploiement-react "readlink -f /srv/apps/react-app/current"
+sudo mariadb -e "DROP DATABASE IF EXISTS app_react_restauration; CREATE DATABASE app_react_restauration;"
+zcat /var/backups/mariadb/app_react-$(date +%F).sql.gz | sudo mariadb app_react_restauration
+sudo mariadb -e "SHOW TABLES FROM app_react_restauration;"
+sudo mariadb -e "DROP DATABASE app_react_restauration;"</pre>
+          </div>
+
+          <p>
+            Les trois reprises sont indépendantes&nbsp;: redémarrer un service (rapide), revenir à
+            une version précédente (quelques secondes), restaurer des données (minutes, et
+            seulement sur une base de test). Confondre les trois est la cause la plus fréquente
+            d'aggravation d'un incident.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>Un retour arrière de code ne défait pas une migration de base.</strong> Si le
+            schéma a changé, l'ancienne version du code doit rester compatible avec le nouveau
+            schéma&nbsp;: c'est pour cela qu'une migration s'écrit pour être additive d'abord, et
+            destructive plus tard, quand plus personne n'utilise l'ancien code.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — dossier technique                                 -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Constituer le dossier technique de production</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'une autre personne puisse reprendre le serveur sans vous appeler.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Contenu attendu du dossier technique de production</caption>
+              <thead>
+                <tr><th scope="col">Section</th><th scope="col">Ce qu'elle contient</th><th scope="col">Pourquoi</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Inventaire</th><td>Applications, technologies, versions, chemins d'installation</td><td>Savoir ce qui tourne, et avec quoi</td></tr>
+                <tr><th scope="row">Comptes</th><td>Rôles des comptes Linux et SQL, <em>sans aucun mot de passe</em></td><td>Comprendre qui a le droit de faire quoi</td></tr>
+                <tr><th scope="row">Exposition réseau</th><td>Ports ouverts, services en écoute, règles du pare-feu</td><td>Prouver que rien d'autre n'est joignable</td></tr>
+                <tr><th scope="row">Procédures</th><td>Déployer, revenir en arrière, restaurer, renouveler un certificat</td><td>Agir vite, sans réfléchir à la méthode</td></tr>
+                <tr><th scope="row">Sauvegardes</th><td>Fréquence, emplacement, rétention, où se trouve la clé de chiffrement</td><td>Une sauvegarde sans sa clé est un fichier inutile</td></tr>
+                <tr><th scope="row">Journal des incidents</th><td>Date, symptôme, cause, correction, contrôle ajouté</td><td>Éviter de rediagnostiquer le même problème</td></tr>
+                <tr><th scope="row">Accès de secours</th><td>Comment reprendre la main si SSH ne répond plus</td><td>Le seul plan qui compte quand on est déjà dehors</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> produisez le document, puis relisez-le en cherchant les secrets.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd12-dossier">Copier</button>
+            <pre id="cmd12-dossier">grep -rniE 'password|passwd|secret|token|private key' DOSSIER-TECHNIQUE.md
+ls -l DOSSIER-TECHNIQUE.md</pre>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Un dossier technique ne contient jamais de secret.</strong> Il décrit
+            <em>où</em> sont les secrets et <em>qui</em> peut les lire, jamais leur valeur. Un
+            document de reprise circule, se copie et s'envoie&nbsp;: tout ce qu'il contient finit
+            par fuiter.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> la recherche ne remonte rien d'autre que des
+              mentions du <em>type</em> de secret (par exemple «&nbsp;mot de passe dans
+              <code>shared/.env</code>&nbsp;»). Vous pouvez transmettre le document sans le relire
+              ligne à ligne à chaque envoi.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si la recherche affiche une valeur
+              exploitable, considérez-la comme compromise&nbsp;: retirez-la du document,
+              <strong>régénérez</strong> le secret concerné, puis corrigez toutes les copies du
+              document. Supprimer la ligne ne suffit pas si le fichier a déjà circulé.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — évaluation                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Évaluation finale</h2>
+            <p><strong>Objectif&nbsp;:</strong> mesurer ce que vous savez refaire seul, sans relire les modules.</p>
+          </div>
+
+          <h3>Vérification des connaissances</h3>
+          <p>Répondez d'abord sans regarder, puis comparez.</p>
+          <ol>
+            <li>Pourquoi les comptes de déploiement n'ont-ils aucun droit d'administration, et quelle commande le prouve&nbsp;?</li>
+            <li>Que fait <code>ln -sfn</code>, et pourquoi la bascule du lien <code>current</code> ne coupe-t-elle pas le service&nbsp;?</li>
+            <li>Pourquoi fermer un port en IPv4 ne suffit-il pas à protéger un service&nbsp;?</li>
+            <li>Quelle est la différence de rôle entre le compte d'exécution et le compte de migration&nbsp;?</li>
+            <li>Un retour arrière de code annule-t-il une migration de base&nbsp;?</li>
+            <li>Que prouve exactement <code>certbot renew --dry-run</code> que <code>certbot certificates</code> ne prouve pas&nbsp;?</li>
+            <li>Pourquoi une sauvegarde conservée uniquement sur le serveur ne sauvegarde-t-elle rien&nbsp;?</li>
+            <li>Quelle est la différence entre un redémarrage de service et un retour arrière de version&nbsp;?</li>
+          </ol>
+
+          <details>
+            <summary>Réponses</summary>
+            <ol>
+              <li>Parce que déployer consiste à écrire dans des fichiers, ce qui ne demande aucun privilège&nbsp;: le compte possède son dossier et son groupe. <code>sudo -l -U deploy-react</code>, puis un <code>sudo -n true</code> en tant que ce compte, le prouvent.</li>
+              <li><code>ln -sfn</code> remplace le lien (<code>-f</code>) sans créer de lien imbriqué (<code>-n</code>). Le remplacement est atomique&nbsp;: la nouvelle cible est mise en place d'un seul coup, donc aucun visiteur ne voit un état intermédiaire.</li>
+              <li>Parce que le même service peut écouter en IPv6&nbsp;: il reste joignable même si la règle IPv4 l'interdit. Il faut filtrer les deux familles, et le vérifier dans <code>ss</code> comme dans les règles du pare-feu.</li>
+              <li>Le compte d'exécution fait tourner le processus et lit les secrets&nbsp;; le compte de migration modifie la structure de la base. Aucun des deux n'administre le serveur MariaDB.</li>
+              <li>Non. Le schéma reste tel qu'il est&nbsp;: c'est pourquoi la version précédente du code doit rester compatible, et pourquoi une migration destructive ne s'applique qu'après la fin de vie de l'ancien code.</li>
+              <li>La simulation exécute réellement tout le processus d'autorisation et de validation, sans remplacer le certificat. Lister les certificats montre seulement ceux qui existent, pas que le renouvellement fonctionnera.</li>
+              <li>Parce qu'un disque qui meurt emporte la copie avec lui&nbsp;: il faut au moins un exemplaire hors de la machine, et la clé de chiffrement ailleurs encore.</li>
+              <li>Redémarrer relance le même code pour qu'il recharge sa configuration&nbsp;; revenir en arrière change la version exécutée. Le premier corrige un état bloqué, le second corrige un code fautif.</li>
+            </ol>
+          </details>
+
+          <h3>Défi pratique</h3>
+          <div class="callout">
+            <strong>Reconstruction à l'aveugle.</strong> Sur une machine de test jetable&nbsp;:
+            reconstruisez l'application PHP (base, compte d'exécution, compte de migration,
+            fichiers, service, domaine, HTTPS) en utilisant <strong>uniquement</strong> votre
+            dossier technique et vos sauvegardes. Chronométrez. Interdiction d'ouvrir les modules.
+            <br>
+            Notez chaque moment où vous avez dû <em>deviner</em>. Ce sont exactement les lacunes de
+            votre documentation — et la liste de ce qu'il faut y ajouter.
+            <br>
+            <strong>Aucune solution n'est fournie ici&nbsp;:</strong> c'est l'exercice où l'on
+            apprend le plus, et il perdrait tout son intérêt avec une correction.
+          </div>
+
+          <h3>Synthèse du parcours</h3>
+          <ul class="checklist">
+            <li><span><strong>Séparer les rôles</strong> plutôt que multiplier les permissions&nbsp;: déploiement, exécution, migration, administration.</span></li>
+            <li><span><strong>Exposer le minimum</strong>&nbsp;: une seule entrée publique, Nginx, et tout le reste en boucle locale.</span></li>
+            <li><span><strong>Ne jamais écraser</strong>&nbsp;: livraisons horodatées, lien basculé, cinq versions conservées.</span></li>
+            <li><span><strong>Vérifier les deux familles d'adresses</strong>, systématiquement.</span></li>
+            <li><span><strong>Tester ce qui doit servir en urgence</strong>&nbsp;: renouvellement de certificat, retour arrière, restauration.</span></li>
+            <li><span><strong>Sortir les copies du serveur</strong>, et la clé de chiffrement plus loin encore.</span></li>
+            <li><span><strong>Écrire ce qu'on a fait</strong>, y compris ce qu'on n'a pas su faire.</span></li>
+          </ul>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Un service applicatif écoute sur une adresse publique</th>
+                  <td>Configuration d'écoute par défaut, jamais restreinte</td>
+                  <td>Le lier à la boucle locale, redémarrer, revérifier avec <code>ss</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Un <code>.env</code> est présent dans un dossier servi</th>
+                  <td>Fichier placé au mauvais endroit au déploiement</td>
+                  <td>Le déplacer, le retirer de la livraison, et régénérer les secrets exposés</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le dossier technique contient un mot de passe</th>
+                  <td>Confusion entre «&nbsp;documenter&nbsp;» et «&nbsp;copier&nbsp;»</td>
+                  <td>Retirer la valeur, régénérer le secret, corriger toutes les copies</td>
+                </tr>
+                <tr>
+                  <th scope="row">La liste des mises à jour n'est jamais appliquée</th>
+                  <td>Aucune routine de maintenance</td>
+                  <td>Fixer un créneau, appliquer, redémarrer, revérifier les services</td>
+                </tr>
+                <tr>
+                  <th scope="row">Une livraison ancienne manque au moment du retour arrière</th>
+                  <td>Rétention non appliquée, ou purge manuelle trop large</td>
+                  <td>Vérifier la rétention sur cinq versions et sa vérification automatique</td>
+                </tr>
+                <tr>
+                  <th scope="row">Personne ne sait ce qui tourne sur le serveur</th>
+                  <td>Aucun inventaire tenu à jour</td>
+                  <td>Écrire l'inventaire, et l'inclure dans la procédure de déploiement</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale du parcours</h2>
+            <p>Le parcours est terminé lorsque les douze points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Les trois applications répondent en HTTPS sur leur domaine, avec redirection depuis HTTP.</span></li>
+            <li><span>Seuls SSH, Nginx et les services voulus sont joignables&nbsp;; le reste n'écoute qu'en boucle locale.</span></li>
+            <li><span>Le pare-feu filtre IPv4 <em>et</em> IPv6, et vous l'avez vérifié dans les règles.</span></li>
+            <li><span>Aucun compte de déploiement ne dispose d'un droit d'administration.</span></li>
+            <li><span>Aucun secret ne se trouve dans un dossier servi, ni dans l'historique Git, ni dans le dossier technique.</span></li>
+            <li><span>Les certificats sont valides et le renouvellement a été simulé avec succès.</span></li>
+            <li><span>Le déploiement passe par un pipeline qui refuse de publier sans tests.</span></li>
+            <li><span>Chaque application conserve cinq versions réussies, et le retour arrière a été exercé.</span></li>
+            <li><span>Les sauvegardes sont chiffrées, automatiques, et au moins une copie vit hors du serveur.</span></li>
+            <li><span>Une restauration de base a été réussie sur une base de test, puis nettoyée.</span></li>
+            <li><span>Les journaux sont persistants, tournés, et vous savez où regarder pour chaque composant.</span></li>
+            <li><span>Le dossier technique permet à quelqu'un d'autre de reprendre le serveur — vous l'avez testé.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Vous êtes arrivé au bout.</strong> Ce que vous avez construit n'est pas un
+            exercice&nbsp;: c'est un serveur que vous savez expliquer, sauvegarder, réparer et
+            reconstruire. C'est exactement ce qu'on attend d'une personne qui met une application
+            en production.
+          </div>
+          <div class="callout callout--warn">
+            <strong>Limites à garder en tête.</strong> Trois comptes SSH distincts ne constituent
+            pas une isolation forte&nbsp;: il n'y a ni cloisonnement du noyau, ni conteneur. Une
+            compromission au niveau de l'administration atteint les trois applications.
+            L'isolation obtenue ici est une séparation de <em>permissions</em>, pas une barrière
+            de sécurité absolue.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 12</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S2</td><td>Documentation officielle Debian</td><td><code>https://www.debian.org/doc/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S24</td><td>RFC 5737 — adresses IPv4 de documentation</td><td><code>https://www.rfc-editor.org/rfc/rfc5737</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S25</td><td>RFC 3849 — préfixe IPv6 de documentation</td><td><code>https://www.rfc-editor.org/rfc/rfc3849</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man ss</code> · <code>man nft</code> · <code>man sshd</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">
+            Ce module de synthèse réutilise les sources citées par les modules 01 à 11&nbsp;: le détail
+            et les niveaux de confiance figurent dans <code>docs/SOURCES.md</code>. Les sorties de
+            terminal sont décrites, non recopiées&nbsp;: aucun audit, aucune panne provoquée et aucune
+            restauration n'ont été exécutés sur un serveur réel pour rédiger ce module.
+          </p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Fin du parcours</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("12");
+  </script>
+</body>
+</html>

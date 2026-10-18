@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 08 — Organiser les dépôts Git et les versions : un dépôt par application, branches et conventions de commit, séparation des environnements, exclusion des secrets et relecture avant intégration.">
+  <meta name="color-scheme" content="light">
+  <title>Module 08 — Organiser les dépôts Git et les versions · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Branches</a>
+        <a href="#etape-4">Secrets</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 08 · Du code qu'on peut relire</p>
+      <h1 id="titre">Organiser les dépôts Git et les versions</h1>
+      <p class="lead">
+        Trois applications, c'est trois histoires différentes. Ce module range le code en trois
+        dépôts, fixe une convention de branches, sépare les environnements, et fait en sorte
+        qu'aucun mot de passe ne finisse jamais dans l'historique.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 08</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Aucun déploiement</span> on organise, on ne publie pas encore</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 06</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Un secret poussé dans un dépôt doit être considéré comme compromis.</strong> Le
+        retirer ensuite ne suffit pas&nbsp;: l'historique conserve tout. La seule réaction correcte
+        est de <strong>régénérer</strong> le secret.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Cette page ne mentionne aucune forge particulière comme obligatoire.</strong> Les
+        principes valent pour Git lui-même&nbsp;; les interfaces de relecture varient d'une forge à
+        l'autre et ne sont pas décrites ici.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 08">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Un dépôt par application</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Branches et messages de commit</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Séparer les environnements</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Exclure les secrets</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Faire relire avant intégration</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, chaque application a son dépôt, ses branches et ses
+              environnements, et l'historique ne contient aucun secret.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Créer</strong> un dépôt par application, avec une branche principale unique.</span></li>
+            <li><span><strong>Appliquer</strong> une convention de nommage pour les branches et les messages de commit.</span></li>
+            <li><span><strong>Séparer</strong> local, test, préproduction et production.</span></li>
+            <li><span><strong>Empêcher</strong> tout secret d'entrer dans l'historique.</span></li>
+            <li><span><strong>Instaurer</strong> une relecture avant intégration sur la branche principale.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Pourquoi un dépôt par application&nbsp;?</strong> Parce que les trois
+            applications se déploient séparément. Un dépôt commun obligerait à déployer les trois
+            ensemble, à chaque fois, même pour corriger une virgule.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Ce module travaille sur du code déjà présent.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 06&nbsp;: les trois applications tournent sur le serveur.</span></li>
+            <li><span>Le code des trois applications est disponible localement ou sur le serveur.</span></li>
+            <li><span>Vous savez écrire un fichier <code>.gitignore</code> et lire la sortie de <code>git status</code>.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Avant tout premier commit, vérifiez ce que vous allez versionner.</strong> Un
+            dépôt initialisé dans le mauvais dossier versionne des dépendances, un dossier
+            <code>dist/</code>, et parfois le fichier <code>.env</code> réel.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — un dépôt par application                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Un dépôt par application</h2>
+            <p><strong>Objectif&nbsp;:</strong> trois dépôts indépendants, avec une branche principale explicite.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> initialisez le dépôt de l'application A sur votre poste local.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">crée un dépôt</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-init">Copier</button>
+            <pre id="cmd08-init">cd ~/projets/react-app
+git init -b main
+git status</pre>
+          </div>
+
+          <p>
+            <code>git init -b main</code> crée le dépôt <strong>et</strong> nomme la branche
+            principale <code>main</code>&nbsp;: plus de doute sur le nom par défaut selon la version
+            de Git installée. <code>git status</code> montre ce qui serait ajouté&nbsp;: lisez-le
+            avant d'ajouter quoi que ce soit.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>git status</code> indique
+              <code>On branch main</code> et <code>No commits yet</code>. La liste des fichiers non
+              suivis ne contient ni <code>node_modules/</code>, ni <code>dist/</code>, ni
+              <code>.env</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>fatal: not a git repository</code>
+              signifie que vous n'êtes pas dans le dossier du projet. Un dépôt créé trop haut (par
+              exemple dans votre dossier personnel) engloberait tous vos projets&nbsp;: supprimez le
+              dossier <code>.git</code> mal placé et recréez-le dans le bon répertoire.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — branches et commits                               -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Branches et messages de commit</h2>
+            <p><strong>Objectif&nbsp;:</strong> que l'historique explique <em>pourquoi</em>, pas seulement <em>quoi</em>.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Convention de nommage des branches</caption>
+              <thead>
+                <tr><th scope="col">Préfixe</th><th scope="col">Usage</th><th scope="col">Exemple</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row"><code>main</code></th><td>Branche principale, toujours déployable</td><td>—</td></tr>
+                <tr><th scope="row"><code>feat/</code></th><td>Nouvelle fonctionnalité</td><td><code>feat/ajout-recherche</code></td></tr>
+                <tr><th scope="row"><code>fix/</code></th><td>Correction de bug</td><td><code>fix/erreur-connexion-sql</code></td></tr>
+                <tr><th scope="row"><code>chore/</code></th><td>Maintenance sans effet visible</td><td><code>chore/maj-dependances</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez une branche, commitez, puis relisez votre historique.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-branch">Copier</button>
+            <pre id="cmd08-branch">git switch -c feat/ajout-recherche
+git add -A
+git commit -m "Ajouter la recherche par nom dans la liste"
+git log --oneline -5
+git switch main</pre>
+          </div>
+
+          <p>
+            <code>git switch</code> change de branche&nbsp;: ici, on <em>crée</em> une branche dédiée
+            plutôt que de travailler directement sur <code>main</code>. Un message de commit utile
+            décrit l'intention, pas les fichiers touchés&nbsp;: Git sait déjà quels fichiers ont
+            changé.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>git log --oneline</code> affiche un message
+              lisible, et <code>git branch</code> montre que vous êtes revenu sur
+              <code>main</code> sans y avoir commité.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>user.name and user.email are not
+              set</code>&nbsp;: configurez-les une fois pour toutes avec
+              <code>git config --global user.name</code> et <code>user.email</code>. Un commit
+              envoyé sur <code>main</code> par erreur&nbsp;: créez la branche
+              <code>fix/...</code> à cet endroit et ramenez <code>main</code> au commit précédent,
+              après avoir vérifié que personne d'autre ne l'utilise.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — environnements                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Séparer les environnements</h2>
+            <p><strong>Objectif&nbsp;:</strong> que le code sache où il tourne, sans contenir de valeur propre à un environnement.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Les quatre environnements et leur usage</caption>
+              <thead>
+                <tr><th scope="col">Environnement</th><th scope="col">Où</th><th scope="col">Données</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">local</th><td>Votre poste</td><td>Jeu de données de test, jetable</td></tr>
+                <tr><th scope="row">test</th><td>Intégration continue</td><td>Base éphémère, recréée à chaque exécution</td></tr>
+                <tr><th scope="row">préproduction</th><td>Serveur, domaine non public</td><td>Copie anonymisée de la production</td></tr>
+                <tr><th scope="row">production</th><td>Serveur, domaines publics</td><td>Données réelles — aucune expérimentation</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> versionnez un <em>modèle</em> de fichier d'environnement, jamais un fichier réel.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-env-example">Copier</button>
+            <pre id="cmd08-env-example">DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=app_react
+DB_USER=user_react
+DB_SECRET=remplacer-par-un-secret-local</pre>
+          </div>
+
+          <p>Enregistrez ce contenu dans <code>.env.example</code>, qui est versionné. Le fichier
+            <code>.env</code> réel, lui, ne l'est jamais&nbsp;: il est recréé sur chaque serveur à
+            partir de ses propres secrets (module&nbsp;06).</p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>.env.example</code> apparaît dans
+              <code>git status</code> comme fichier à ajouter, et son contenu ne permet d'accéder à
+              aucune base réelle&nbsp;: les valeurs sont des exemples.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Une variable compilée dans un build frontend n'est pas un secret.</strong> Tout
+            ce qui est intégré au code React part chez le navigateur en clair. Les identifiants SQL
+            restent côté serveur, dans le fichier <code>.env</code> lu par l'application.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — secrets                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Exclure les secrets du versionnement</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'aucun mot de passe, aucune clé privée, ne puisse être committé par accident.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez le fichier <code>.gitignore</code> à la racine du dépôt.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-gitignore">Copier</button>
+            <pre id="cmd08-gitignore">.env
+.env.*
+!.env.example
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.log</pre>
+          </div>
+
+          <p>
+            En informatique, le <code>!</code> veut dire «&nbsp;sauf&nbsp;»&nbsp;: la ligne
+            <code>!.env.example</code> réintègre le modèle, alors que tous les autres fichiers
+            d'environnement sont ignorés. <code>dist/</code> est ignoré parce qu'il est
+            <em>produit</em> par le build&nbsp;: on versionne la recette, pas le gâteau.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> prouvez que l'exclusion fonctionne réellement.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-verif-ignore">Copier</button>
+            <pre id="cmd08-verif-ignore">touch .env
+git check-ignore -v .env
+git status --porcelain</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>git check-ignore -v .env</code> affiche la
+              ligne du <code>.gitignore</code> responsable, et <code>git status --porcelain</code>
+              ne mentionne pas <code>.env</code>. Vous pouvez ensuite supprimer le fichier témoin.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si <code>.env</code> apparaît quand même,
+              <code>.gitignore</code> n'est pas à la racine du dépôt, ou le fichier a déjà été
+              <em>suivi</em> par Git&nbsp;: un <code>.gitignore</code> ne s'applique pas aux fichiers
+              déjà suivis.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Si un secret a déjà été poussé&nbsp;:</strong> le supprimer au commit suivant ne
+            le retire pas de l'historique. La réaction correcte, dans cet ordre&nbsp;: considérer le
+            secret comme public, le <strong>régénérer</strong> (base de données, clé SSH, jeton
+            d'accès), puis seulement nettoyer l'historique si nécessaire. Régénérer d'abord&nbsp;:
+            c'est ce qui arrête réellement l'exposition.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — relecture                                         -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Faire relire avant intégration</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'aucune modification n'atteigne la branche principale sans avoir été relue.</p>
+          </div>
+
+          <p>
+            Le principe tient en une phrase&nbsp;: <strong>on ne pousse pas directement sur
+            <code>main</code></strong>. On pousse la branche <code>feat/...</code> ou
+            <code>fix/...</code>, et on demande une relecture. La branche principale reste toujours
+            dans un état déployable.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> déclarez le dépôt distant et envoyez votre branche.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd08-remote">Copier</button>
+            <pre id="cmd08-remote">git remote add origin &lt;URL_DU_DEPOT_DISTANT&gt;
+git push -u origin main
+git push -u origin feat/ajout-recherche</pre>
+          </div>
+
+          <p>
+            <code>git push -u origin main</code> envoie la branche principale et mémorise sa
+            destination&nbsp;: les envois suivants n'ont plus besoin de préciser la cible.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> la branche <code>feat/ajout-recherche</code> existe
+              sur le dépôt distant, et <code>main</code> ne contient <strong>pas</strong> encore vos
+              modifications. La relecture peut commencer.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>failed to push some refs</code> signifie
+              que le dépôt distant a des commits que vous n'avez pas&nbsp;: récupérez-les avec
+              <code>git pull --rebase</code> avant de pousser, plutôt que de forcer. Un
+              <code>push --force</code> sur une branche partagée peut effacer le travail d'autrui.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>.env</code> apparaît malgré le <code>.gitignore</code></th>
+                  <td>Le fichier est déjà suivi par Git</td>
+                  <td>Retirez-le de l'index, régénérez le secret, puis vérifiez à nouveau</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>node_modules/</code> versionné</th>
+                  <td>Le <code>.gitignore</code> a été créé après le premier commit</td>
+                  <td>Retirez-le de l'index&nbsp;: un dossier déjà suivi n'est plus ignoré</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>failed to push some refs</code></th>
+                  <td>Le dépôt distant a avancé</td>
+                  <td><code>git pull --rebase</code>, puis poussez à nouveau</td>
+                </tr>
+                <tr>
+                  <th scope="row">Un fichier <code>dist/</code> modifié apparaît dans chaque commit</th>
+                  <td>Le build est versionné alors qu'il est généré</td>
+                  <td>Ajoutez <code>dist/</code> au <code>.gitignore</code> et retirez-le de l'index</td>
+                </tr>
+                <tr>
+                  <th scope="row">Conflit sur <code>.env.example</code></th>
+                  <td>Deux personnes ont ajouté des variables différentes</td>
+                  <td>Fusionnez les deux listes&nbsp;: le modèle doit contenir <em>toutes</em> les variables, sans valeurs réelles</td>
+                </tr>
+                <tr>
+                  <th scope="row">Un participant ne peut pas cloner</th>
+                  <td>Il utilise son propre compte SSH, ou la mauvaise URL</td>
+                  <td>Vérifiez l'URL du dépôt et la clé déclarée sur la forge</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les sept points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Les trois dépôts existent et portent une branche principale nommée <code>main</code>.</span></li>
+            <li><span>La convention de branches est écrite et appliquée.</span></li>
+            <li><span>Chaque dépôt contient un <code>.env.example</code> à jour et aucun <code>.env</code> réel.</span></li>
+            <li><span><code>git check-ignore -v .env</code> prouve l'exclusion.</span></li>
+            <li><span><code>git log --all --oneline -- .env</code> ne renvoie <strong>rien</strong>.</span></li>
+            <li><span>Aucune modification n'arrive sur <code>main</code> sans relecture.</span></li>
+            <li><span>La règle «&nbsp;un secret exposé se régénère&nbsp;» est connue de toute l'équipe.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 09 automatise tout ce qui a été fait à la
+            main&nbsp;: tests, build, déploiement, contrôle de santé et retour arrière.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 08</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S17</td><td>Git — branches, remotes, historique</td><td><code>https://git-scm.com/doc</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S12</td><td>React — variables d'environnement et build</td><td><code>https://react.dev/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S2</td><td>Documentation officielle Debian</td><td><code>https://www.debian.org/doc/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S24</td><td>RFC 5737 — adresses IPv4 de documentation</td><td><code>https://www.rfc-editor.org/rfc/rfc5737</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man git-switch</code> · <code>man gitignore</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un dépôt réel. Aucun dépôt distant n'a été créé ni consulté pour rédiger ce module.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("08");
+  </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+/* ==========================================================================
+   components.css — cartes, badges, boutons, alertes, recherche, progression
+   VPS Academy 2026
+   ========================================================================== */
+
+/* --- Boutons --------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover { background: var(--accent-strong); color: #fff; box-shadow: 0 2px 6px rgba(31, 111, 235, 0.15); }
+.btn.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn.secondary:hover { background: var(--surface-2); color: var(--text); box-shadow: 0 2px 6px rgba(44, 47, 54, 0.15); }
+.btn[aria-disabled="true"],
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --- Cartes ---------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-1);
+}
+.card h3 { margin-bottom: var(--sp-1); }
+.card p { color: var(--text-muted); font-size: 0.95rem; margin-top: var(--sp-2); }
+
+/* --- Carte de module ------------------------------------------------------- */
+.module-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.module-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); }
+
+.module-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.module-card__num {
+  font-weight: 800;
+  color: var(--accent-strong);
+  font-variant-numeric: tabular-nums;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.5rem;
+  font-size: 0.85rem;
+}
+.module-card__title { font-size: 1.05rem; }
+.module-card__title a { text-decoration: none; color: var(--text); }
+.module-card__title a:hover { color: var(--accent-strong); text-decoration: underline; }
+.module-card__desc { color: var(--text-muted); font-size: 0.92rem; flex: 1; }
+.module-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* État non disponible : carte atténuée, sans lien actif */
+.module-card--planned { background: var(--surface-2); border-style: dashed; }
+.module-card--planned .module-card__title { color: var(--text-muted); }
+
+/* --- Badges d'état --------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge--planned  { background: var(--surface-3); color: var(--text-muted); border-color: var(--border-strong); }
+.badge--published{ background: var(--accent-soft); color: var(--accent-strong); border-color: #bcd4fb; }
+.badge--drafted  { background: var(--warn-soft); color: var(--warn); border-color: #ecd9a3; }
+.badge--validated{ background: var(--ok-soft); color: var(--ok); border-color: #a9dcc0; }
+/* Alias historiques (Prompt 2) conservés pour compatibilité */
+.badge--available{ background: var(--accent-soft); color: var(--accent-strong); border-color: #bcd4fb; }
+.badge--done     { background: var(--ok-soft); color: var(--ok); border-color: #a9dcc0; }
+
+/* --- Légende des états de module ------------------------------------------ */
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.status-legend__item { display: inline-flex; align-items: center; gap: var(--sp-2); }
+
+/* --- Tags ------------------------------------------------------------------ */
+.tag {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+
+/* --- Alertes (callouts) ---------------------------------------------------- */
+.callout {
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
+  margin-top: var(--sp-4);
+}
+.callout > :first-child { margin-top: 0; }
+.callout--warn   { border-color: var(--warn);   background: var(--warn-soft); }
+.callout--danger { border-color: var(--danger); background: var(--danger-soft); }
+.callout--ok     { border-color: var(--ok);     background: var(--ok-soft); }
+
+/* --- Recherche ------------------------------------------------------------- */
+.search-box { display: flex; flex-direction: column; gap: var(--sp-2); max-width: 520px; }
+.search-box label { font-weight: 600; font-size: 0.9rem; }
+.search {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.search:focus-visible { border-color: var(--accent); }
+.search-status { font-size: 0.85rem; color: var(--text-muted); min-height: 1.2em; }
+
+/* --- Progression ----------------------------------------------------------- */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.progress__track {
+  flex: 1 1 200px;
+  height: 10px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress__bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.progress__label { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; }
+
+/* --- Statistiques ---------------------------------------------------------- */
+.stats { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); }
+.stat__value { font-size: 1.5rem; font-weight: 800; }
+.stat__label { font-size: 0.85rem; color: var(--text-muted); }
+
+/* --- Schéma d'architecture ------------------------------------------------- */
+.diagram {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* --- Bloc de code ---------------------------------------------------------- */
+.code-block { position: relative; margin-top: var(--sp-4); }
+.code-block pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: var(--sp-4);
+  padding-top: calc(var(--sp-4) + 1.6rem);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+.code-block__copy {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  font-size: 0.78rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--code-text);
+  cursor: pointer;
+}
+.code-block__copy:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* --- Tableaux -------------------------------------------------------------- */
+.table-wrap { overflow-x: auto; margin-top: var(--sp-4); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); vertical-align: top; }
+thead th { background: var(--surface-2); font-weight: 700; }
+
+/* --- Liste de contrôle ----------------------------------------------------- */
+.checklist { margin-top: var(--sp-3); display: grid; gap: var(--sp-2); }
+
+/* `flex-wrap: wrap` laisse le contenu d'un élément de liste se replier au lieu
+   de déborder horizontalement. Le débordement observé sur écran étroit (747 px
+   de contenu pour 358 px disponibles) est corrigé à la source par
+   `.layout > * { min-width: 0 }` (voir layout.css) ; cette règle rend en plus la
+   liste tolérante aux contenus multiples (icône + libellé + texte).
+   Le contenu de chaque puce de la page de cours est un enfant unique, qui se
+   replie à l'intérieur de cet enfant. */
+.checklist li { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: flex-start; }
+
+/* --- Messages d'erreur / états -------------------------------------------- */
+.state-message {
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+[hidden] { display: none !important; }

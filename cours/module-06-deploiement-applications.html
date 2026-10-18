@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 06 — Déployer React + Express, PHP et Python : arborescence versionnée sous /srv/apps, services systemd, pool PHP-FPM dédié, environnement virtuel Python et vérification de l'isolation entre applications.">
+  <meta name="color-scheme" content="light">
+  <title>Module 06 — Déployer React + Express, PHP et Python · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Express</a>
+        <a href="#etape-4">Uvicorn</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 06 · Faire tourner les applications</p>
+      <h1 id="titre">Déployer React + Express, PHP et Python</h1>
+      <p class="lead">
+        Trois applications, trois technologies, un seul serveur. Ce module les fait tourner
+        côte à côte&nbsp;: chacune avec son compte, son dossier versionné, son service, et
+        aucune possibilité d'aller lire chez les voisines.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 06</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Applications internes</span> rien n'est encore public</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> modules 04 et 05</span>
+      </div>
+      <div class="callout callout--warn">
+        <strong>À ce stade, aucune application n'est accessible depuis Internet.</strong> Express
+        et Uvicorn écoutent sur la boucle locale, PHP-FPM n'écoute même pas sur le réseau. La
+        publication viendra au module&nbsp;07, derrière Nginx et HTTPS.
+      </div>
+      <div class="callout callout--danger">
+        <strong>Trois comptes ne suffisent pas à tout isoler.</strong> Ils séparent les
+        responsabilités et les fichiers. Ils ne remplacent pas un conteneur&nbsp;: une
+        compromission de <code>root</code> atteindrait les trois applications.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 06">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Arborescence et permissions</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — App A : React + Express</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — App B : PHP natif + PDO</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — App C : FastAPI + Uvicorn</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Vérifier l'isolation</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, les trois applications répondent en local, chacune sous son
+              propre compte, et aucune ne peut lire les fichiers des autres.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Organiser</strong> chaque application en livraisons versionnées, avec un lien <code>current</code>.</span></li>
+            <li><span><strong>Lancer</strong> l'API Express avec un service systemd dédié.</span></li>
+            <li><span><strong>Configurer</strong> un pool PHP-FPM propre à l'application PHP.</span></li>
+            <li><span><strong>Créer</strong> un environnement virtuel Python et lancer Uvicorn par systemd.</span></li>
+            <li><span><strong>Prouver</strong> qu'aucun compte ne peut lire les données d'une autre application.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Le lien <code>current</code>, à quoi ça sert&nbsp;?</strong> Les applications
+            lisent toujours <code>/srv/apps/&lt;app&gt;/current</code>. Déployer une nouvelle
+            version revient donc à déplacer <em>un seul lien symbolique</em> — et le retour arrière
+            aussi.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Ce module s'appuie sur les deux précédents.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 04&nbsp;: les trois sous-domaines résolvent vers le serveur.</span></li>
+            <li><span>Module 05&nbsp;: Nginx, PHP-FPM, Python, Node.js et MariaDB sont installés, les bases et les six comptes SQL existent.</span></li>
+            <li><span>Les comptes <code>deploy-*</code> et <code>svc-*</code> ainsi que les groupes <code>reactapp</code>, <code>phpapp</code> et <code>pythonapp</code> sont créés (module&nbsp;03).</span></li>
+            <li><span>Le code des trois applications est disponible&nbsp;: dépôt Git à cloner, ou fichiers à transférer depuis votre poste.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Vérifiez les comptes avant d'écrire des fichiers.</strong> Un
+            <code>install -o deploy-react</code> sur un compte inexistant échoue, et laisse
+            l'arborescence appartenant à <code>root</code> — d'où des « permission denied » très
+            difficiles à comprendre plus tard.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — arborescence                                      -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Créer l'arborescence versionnée</h2>
+            <p><strong>Objectif&nbsp;:</strong> que chaque application ait ses dossiers, ses droits, et un point de bascule.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez les dossiers de l'application A avec les bons propriétaires.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">crée des dossiers</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-arbo">Copier</button>
+            <pre id="cmd06-arbo">sudo install -d -m 750 -o deploy-react -g reactapp /srv/apps/react-app/releases
+sudo install -d -m 750 -o deploy-react -g reactapp /srv/apps/react-app/shared
+sudo install -d -m 750 -o deploy-react -g reactapp /srv/apps/react-app/releases/20261017-1010
+sudo -u deploy-react ln -sfn /srv/apps/react-app/releases/20261017-1010 /srv/apps/react-app/current</pre>
+          </div>
+
+          <p>
+            Le mode <code>750</code> empêche toute autre application de <em>traverser</em> ce
+            dossier&nbsp;: même un compte voisin qui connaît le chemin ne peut pas y entrer. Le
+            dernier chiffre (<code>0</code>) retire tous les droits au reste du monde.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> répétez pour les applications B et C.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-arbo-reste">Copier</button>
+            <pre id="cmd06-arbo-reste">sudo install -d -m 750 -o deploy-php -g phpapp /srv/apps/php-app/releases
+sudo install -d -m 750 -o deploy-php -g phpapp /srv/apps/php-app/shared
+sudo install -d -m 750 -o deploy-php -g phpapp /srv/apps/php-app/releases/20261017-1010
+
+sudo install -d -m 750 -o deploy-python -g pythonapp /srv/apps/python-app/releases
+sudo install -d -m 750 -o deploy-python -g pythonapp /srv/apps/python-app/shared
+sudo install -d -m 750 -o deploy-python -g pythonapp /srv/apps/python-app/releases/20261017-1010</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>ls -ld /srv/apps/*/ /srv/apps/*/shared</code>
+              montre <code>deploy-react:reactapp</code>, <code>deploy-php:phpapp</code> et
+              <code>deploy-python:pythonapp</code>, tous en <code>750</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>chown failed: invalid user</code>
+              signifie que le compte n'existe pas&nbsp;: revenez à l'étape 3 du module&nbsp;03.
+              Si une arborescence appartient déjà à <code>root</code>, corrigez-la avec
+              <code>sudo chown -R deploy-react:reactapp /srv/apps/react-app</code> <em>après</em>
+              avoir vérifié que ce dossier ne contient aucun fichier partagé.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — Express                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — App A : publier React et lancer Express</h2>
+            <p><strong>Objectif&nbsp;:</strong> l'API Express répond sur la boucle locale, sous le compte <code>svc-react</code>.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> déployez le code dans la livraison, puis installez les dépendances.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">sous le compte de déploiement</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-code">Copier</button>
+            <pre id="cmd06-a-code">sudo -u deploy-react git clone &lt;URL_DU_DEPOT&gt; /srv/apps/react-app/releases/20261017-1010
+sudo -u deploy-react npm --prefix /srv/apps/react-app/releases/20261017-1010 ci
+sudo -u deploy-react npm --prefix /srv/apps/react-app/releases/20261017-1010 run build</pre>
+          </div>
+
+          <p>
+            <code>npm ci</code> installe exactement les versions verrouillées, et
+            <code>npm run build</code> produit le dossier <code>dist/</code>&nbsp;: c'est du
+            statique, que Nginx servira au module&nbsp;07. L'API Express vit à côté, dans
+            <code>server/</code>.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> créez le fichier de secrets, lisible par le service seul.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-env">Copier</button>
+            <pre id="cmd06-a-env">sudo install -m 640 -o root -g reactapp /dev/null /srv/apps/react-app/shared/.env
+sudoedit /srv/apps/react-app/shared/.env</pre>
+          </div>
+
+          <p>Dans ce fichier, renseignez les identifiants SQL du compte d'exécution&nbsp;:</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-env-contenu">Copier</button>
+            <pre id="cmd06-a-env-contenu">DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=app_react
+DB_USER=user_react
+DB_SECRET=&lt;MOT_DE_PASSE_EXECUTION&gt;</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez le service, puis démarrez-le.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-unit">Copier</button>
+            <pre id="cmd06-a-unit">sudoedit /etc/systemd/system/app-react-api.service</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-unit-contenu">Copier</button>
+            <pre id="cmd06-a-unit-contenu">[Unit]
+Description=API Express (application React + Express)
+After=network-online.target mariadb.service
+
+[Service]
+User=svc-react
+Group=reactapp
+WorkingDirectory=/srv/apps/react-app/current/server
+EnvironmentFile=/srv/apps/react-app/shared/.env
+ExecStart=/usr/bin/node /srv/apps/react-app/current/server/index.js
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-a-start">Copier</button>
+            <pre id="cmd06-a-start">command -v node
+sudo systemctl daemon-reload
+sudo systemctl enable --now app-react-api
+systemctl status app-react-api --no-pager
+curl -sS http://127.0.0.1:3001/health</pre>
+          </div>
+
+          <p>
+            <code>User=svc-react</code> fait tourner le processus sous le compte d'<strong>exécution</strong>.
+            <code>EnvironmentFile</code> charge les secrets sans les mettre dans la ligne de
+            commande. <code>command -v node</code> vérifie le chemin exact du binaire&nbsp;:
+            corrigez <code>ExecStart</code> s'il diffère.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>systemctl status</code> indique
+              <code>active (running)</code> et <code>curl</code> renvoie la réponse de
+              <code>/health</code>. <code>ss -lntp</code> montre Express sur
+              <code>127.0.0.1</code> seulement.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>status=203/EXEC</code> veut dire que le
+              binaire d'<code>ExecStart</code> est introuvable&nbsp;: comparez avec
+              <code>command -v node</code>. <code>status=200/CHDIR</code>&nbsp;: le dossier de
+              travail n'existe pas — vérifiez que <code>current</code> pointe bien vers une
+              livraison. Les messages du service sont dans
+              <code>journalctl -u app-react-api -n 50</code>.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ne lancez jamais l'API avec <code>--host 0.0.0.0</code> ni en écoutant sur
+            toutes les interfaces.</strong> Un port applicatif visible depuis Internet contourne
+            Nginx, son HTTPS et ses journaux.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — PHP-FPM                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — App B : PHP natif + PDO</h2>
+            <p><strong>Objectif&nbsp;:</strong> un pool PHP-FPM qui exécute uniquement le code de l'application PHP.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> déployez le code, puis créez un pool dédié.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">configure un service</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-b-code">Copier</button>
+            <pre id="cmd06-b-code">sudo -u deploy-php git clone &lt;URL_DU_DEPOT&gt; /srv/apps/php-app/releases/20261017-1010
+sudo -u deploy-php ln -sfn /srv/apps/php-app/releases/20261017-1010 /srv/apps/php-app/current
+sudo install -m 640 -o root -g phpapp /dev/null /srv/apps/php-app/shared/.env</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-b-pool-editor">Copier</button>
+            <pre id="cmd06-b-pool-editor">sudoedit /etc/php/8.4/fpm/pool.d/app-php.conf</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-b-pool">Copier</button>
+            <pre id="cmd06-b-pool">[app-php]
+user = svc-php
+group = phpapp
+listen = /run/php/app-php.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+pm = dynamic
+pm.max_children = 8</pre>
+          </div>
+
+          <p>
+            Le pool écoute sur un <strong>socket de fichier</strong>, pas sur un port réseau&nbsp;:
+            aucun programme extérieur ne peut s'y connecter. Le <code>pm.max_children</code> limite
+            le nombre de processus PHP simultanés, ce qui évite qu'une application gourmande
+            asphyxie le serveur.
+          </p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-b-apply">Copier</button>
+            <pre id="cmd06-b-apply">sudo /usr/sbin/php-fpm8.4 -t
+sudo systemctl restart php8.4-fpm
+ls -l /run/php/app-php.sock
+ss -lntp</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>php-fpm8.4 -t</code> ne signale aucune
+              erreur, le fichier <code>/run/php/app-php.sock</code> existe, et
+              <code>ss -lntp</code> ne montre <strong>aucun</strong> port PHP&nbsp;: c'est le
+              comportement attendu.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>ERROR: [pool app-php] cannot get
+              uid of user 'svc-php'</code> signifie que le compte n'existe pas. Un socket absent
+              après un <code>restart</code> indique une erreur de configuration&nbsp;:
+              <code>journalctl -u php8.4-fpm -n 50</code> donne la ligne exacte. Adaptez
+              <code>8.4</code> à la version affichée par <code>php -v</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — Uvicorn                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — App C : FastAPI + Uvicorn</h2>
+            <p><strong>Objectif&nbsp;:</strong> une API Python isolée dans son environnement virtuel, lancée par systemd.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> déployez le code, puis créez l'environnement virtuel.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">sous le compte d'exécution</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-c-code">Copier</button>
+            <pre id="cmd06-c-code">sudo -u deploy-python git clone &lt;URL_DU_DEPOT&gt; /srv/apps/python-app/releases/20261017-1010
+sudo -u deploy-python ln -sfn /srv/apps/python-app/releases/20261017-1010 /srv/apps/python-app/current
+sudo install -d -m 750 -o svc-python -g pythonapp /srv/apps/python-app/venv
+sudo -u svc-python python3 -m venv /srv/apps/python-app/venv</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-c-pip">Copier</button>
+            <pre id="cmd06-c-pip">sudo -u svc-python /srv/apps/python-app/venv/bin/pip install -r /srv/apps/python-app/current/app/requirements.txt</pre>
+          </div>
+
+          <p>
+            L'environnement virtuel isole les dépendances Python du système&nbsp;: rien ne vient
+            modifier les paquets Debian. Comme il appartient à <code>svc-python</code>, c'est
+            le compte d'exécution qui peut les installer et les lire.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> créez le service.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-c-unit-editor">Copier</button>
+            <pre id="cmd06-c-unit-editor">sudoedit /etc/systemd/system/app-python-web.service</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-c-unit-contenu">Copier</button>
+            <pre id="cmd06-c-unit-contenu">[Unit]
+Description=API FastAPI (application Python)
+After=network-online.target mariadb.service
+
+[Service]
+User=svc-python
+Group=pythonapp
+WorkingDirectory=/srv/apps/python-app/current
+EnvironmentFile=/srv/apps/python-app/shared/.env
+ExecStart=/srv/apps/python-app/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-c-start">Copier</button>
+            <pre id="cmd06-c-start">sudo install -m 640 -o root -g pythonapp /dev/null /srv/apps/python-app/shared/.env
+sudo systemctl daemon-reload
+sudo systemctl enable --now app-python-web
+systemctl status app-python-web --no-pager
+curl -sS http://127.0.0.1:8000/health</pre>
+          </div>
+
+          <p>
+            <code>--host 127.0.0.1</code> est <strong>essentiel</strong>&nbsp;: sans lui, Uvicorn
+            écouterait sur toutes les interfaces. <code>app.main:app</code> désigne le module et
+            l'objet de l'application FastAPI.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> le service est <code>active (running)</code>,
+              <code>curl</code> renvoie la réponse de <code>/health</code>, et
+              <code>ss -lntp</code> montre Uvicorn sur <code>127.0.0.1</code> uniquement.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>ModuleNotFoundError</code> signifie que
+              les dépendances n'ont pas été installées <em>dans ce venv</em>&nbsp;: vérifiez le
+              chemin utilisé dans la commande <code>pip</code>. <code>upstream connect error</code>
+              ou une réponse vide vient plutôt de l'application elle-même&nbsp;: lisez
+              <code>journalctl -u app-python-web -n 50</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — isolation                                         -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Vérifier l'isolation entre les applications</h2>
+            <p><strong>Objectif&nbsp;:</strong> prouver, plutôt que supposer, que les comptes sont bien séparés.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> tentez volontairement des accès <em>interdits</em>. Chacun doit échouer.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">test de sécurité</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd06-tests">Copier</button>
+            <pre id="cmd06-tests">sudo -u deploy-react cat /srv/apps/php-app/shared/.env
+sudo -u deploy-php touch /srv/apps/react-app/current/dist/x
+sudo -u deploy-python cat /srv/apps/react-app/shared/.env
+sudo -l -U deploy-react</pre>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ces commandes doivent échouer.</strong> Si l'une d'elles affiche un secret ou
+            réussit une écriture, votre configuration est fausse&nbsp;: ne continuez pas. Corrigez
+            les propriétaires et les modes du dossier concerné avant tout déploiement.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les trois premières commandes renvoient
+              <code>Permission denied</code>, et <code>sudo -l -U deploy-react</code> refuse en
+              indiquant que cet utilisateur n'a aucun droit <code>sudo</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>sudo: a password is required</code> sur
+            <code>sudo -u</code> signifie que votre propre compte n'a pas de droit d'administration.
+            Une lecture réussie de <code>.env</code> par un compte voisin indique un mode trop
+            permissif&nbsp;: l'objectif reste <code>640 root:&lt;groupe-app&gt;</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>status=203/EXEC</code></th>
+                  <td>Binaire introuvable dans <code>ExecStart</code></td>
+                  <td>Comparez avec <code>command -v node</code> ou le chemin du <code>venv</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>status=200/CHDIR</code></th>
+                  <td>Dossier de travail inexistant</td>
+                  <td>Vérifiez que le lien <code>current</code> pointe vers une livraison</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>status=226/NAMESPACE</code></th>
+                  <td>Option de confinement incompatible avec un chemin utilisé</td>
+                  <td>Retirez temporairement <code>PrivateTmp</code>, puis diagnostiquez</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le service redémarre en boucle</th>
+                  <td>Erreur au démarrage de l'application (port occupé, variable manquante)</td>
+                  <td><code>journalctl -u &lt;service&gt; -n 50</code> donne la cause exacte</td>
+                </tr>
+                <tr>
+                  <th scope="row">Pas de socket PHP-FPM</th>
+                  <td>Pool invalide, ou version PHP différente de celle du chemin</td>
+                  <td><code>php-fpm8.4 -t</code>, puis <code>journalctl -u php8.4-fpm</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Permission denied</code> en lecture de fichiers</th>
+                  <td>Un compte exécute un fichier qu'il ne peut pas lire</td>
+                  <td>Contrôlez le mode de chaque niveau avec <code>namei -l</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les huit points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Les trois arborescences existent sous <code>/srv/apps/</code>, en <code>750</code>, avec le bon propriétaire.</span></li>
+            <li><span>Chaque application a un lien <code>current</code> vers une livraison horodatée.</span></li>
+            <li><span>Les trois services sont <code>active (running)</code> et <code>enabled</code>.</span></li>
+            <li><span>Express et Uvicorn écoutent sur <code>127.0.0.1</code> uniquement.</span></li>
+            <li><span>PHP-FPM utilise un socket de fichier, et aucun port PHP n'apparaît dans <code>ss -lntp</code>.</span></li>
+            <li><span>Les fichiers <code>.env</code> sont en <code>640 root:&lt;groupe-app&gt;</code>.</span></li>
+            <li><span>Les tests d'accès croisés échouent tous, comme attendu.</span></li>
+            <li><span>Aucun port applicatif n'a été ouvert dans le pare-feu.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 07 publie les trois applications derrière
+            Nginx, avec un certificat HTTPS par domaine et une redirection automatique.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 06</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S11</td><td>Express — routes, middleware, gestion d'erreurs</td><td><code>https://expressjs.com/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S12</td><td>React — build et variables d'environnement</td><td><code>https://react.dev/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S13</td><td>Manuel PHP — PDO</td><td><code>https://www.php.net/manual/fr/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S14b</td><td>Python — module <code>venv</code></td><td><code>https://docs.python.org/3/library/venv.html</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S15</td><td>FastAPI — application ASGI, <code>/health</code></td><td><code>https://fastapi.tiangolo.com/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S16</td><td>Uvicorn — serveur ASGI</td><td><code>https://www.uvicorn.org/</code></td><td><strong>Non vérifiée</strong> — aucun code de statut obtenu</td></tr>
+                <tr><td>S10</td><td>Node.js — installation et LTS</td><td><code>https://nodejs.org/docs/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S19</td><td>OWASP Cheat Sheet Series</td><td><code>https://cheatsheetseries.owasp.org/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S21</td><td>systemd — unités et journaux</td><td><code>https://www.freedesktop.org/software/systemd/man/</code></td><td>HTTP 418 — non exploitable automatiquement</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un serveur réel. Uvicorn reste une référence à reconfirmer depuis un accès réseau standard.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("06");
+  </script>
+</body>
+</html>

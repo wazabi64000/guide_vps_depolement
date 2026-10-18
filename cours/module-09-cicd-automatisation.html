@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 09 — Automatiser les déploiements avec CI/CD : un pipeline par application (tests, build, déploiement), clé de déploiement dédiée sans sudo, livraisons versionnées avec bascule du lien current, migrations MariaDB réversibles et retour arrière testé.">
+  <meta name="color-scheme" content="light">
+  <title>Module 09 — Automatiser les déploiements avec CI/CD · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-1">Pipeline</a>
+        <a href="#etape-5">Retour arrière</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 09 · Faire le travail une fois, pour toujours</p>
+      <h1 id="titre">Automatiser les déploiements avec CI/CD</h1>
+      <p class="lead">
+        Vous savez déployer à la main. Ce module transforme ces gestes en un pipeline qui
+        teste, construit, publie et sait revenir en arrière — sans jamais donner de
+        privilèges supplémentaires au compte de déploiement.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 09</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Automatise</span> ce qui était manuel</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> modules 06 et 08</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Un pipeline qui peut déployer est un pipeline qui peut casser.</strong> Deux
+        protections sont obligatoires, dès le premier jour&nbsp;: les tests bloquent le
+        déploiement, et le retour arrière est <em>testé</em>, pas seulement prévu.
+      </div>
+      <div class="callout">
+        <strong>Ce que ce module ne fait pas.</strong> Il ne décrète pas une forge. Les exemples
+        de fichier de workflow utilisent la syntaxe GitHub Actions, citée comme
+        <strong>exemple</strong>&nbsp;: les principes (étapes, secret, concurrence,
+        conditions) se transposent, les noms d'actions et les clés YAML, non.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 09">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Un pipeline par application</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Une clé de déploiement, aucun sudo</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Déployer une livraison et basculer current</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Migrations MariaDB réversibles</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Déclencher, vérifier, revenir en arrière</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, une modification relue et fusionnée se retrouve en
+              production après avoir traversé tests, build et déploiement — et vous savez la
+              retirer en moins de deux minutes.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Écrire</strong> un pipeline par application, avec un ordre fixe&nbsp;: tests, build, déploiement.</span></li>
+            <li><span><strong>Créer</strong> une clé de déploiement dédiée, sans droit sudo.</span></li>
+            <li><span><strong>Déployer</strong> dans une nouvelle livraison, puis basculer le lien <code>current</code>.</span></li>
+            <li><span><strong>Exécuter</strong> les migrations MariaDB avec un compte dédié, après une sauvegarde.</span></li>
+            <li><span><strong>Tester</strong> le retour arrière&nbsp;: le basculer doit toujours fonctionner.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Le principe qui gouverne tout le module.</strong> Le pipeline ne fait que
+            <em>répéter sans réfléchir</em> ce que vous avez déjà réussi à faire à la main. Si
+            vous ne savez pas déployer manuellement, l'automatiser ne fera qu'accélérer vos
+            erreurs.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>L'automatisation s'appuie sur ce qui fonctionne déjà.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 08&nbsp;: les trois dépôts existent, avec une branche principale protégée.</span></li>
+            <li><span>Module 06&nbsp;: les livraisons versionnées et le lien <code>current</code> sont en place.</span></li>
+            <li><span>Les services (Express, Uvicorn, PHP-FPM) répondent en local.</span></li>
+            <li><span>Une sauvegarde récente de chaque base existe — le module 10 formalise la méthode, mais une sauvegarde manuelle avant migration est obligatoire ici.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Aucun pipeline ne s'écrit sur un serveur déjà en incident.</strong> Si une
+            application ne démarre pas correctement à la main, réparez-la d'abord&nbsp;:
+            automatiser un état instable ne fait que rendre la panne reproductible.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — le pipeline                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Un pipeline par application</h2>
+            <p><strong>Objectif&nbsp;:</strong> trois pipelines indépendants, chacun avec le même ordre d'étapes.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Les trois étapes d'un pipeline et ce qu'elles garantissent</caption>
+              <thead>
+                <tr><th scope="col">Étape</th><th scope="col">Quand</th><th scope="col">Ce qu'elle garantit</th><th scope="col">Si elle échoue</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Vérifier</th><td>À chaque proposition de modification</td><td>Le code compile, les tests passent</td><td>Rien n'est déployé</td></tr>
+                <tr><th scope="row">Construire</th><td>Après vérification réussie</td><td>Les fichiers à publier existent</td><td>Rien n'est déployé</td></tr>
+                <tr><th scope="row">Déployer</th><td>Sur la branche principale uniquement</td><td>Une nouvelle livraison est publiée</td><td>La livraison précédente reste active</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez le fichier de workflow de l'application A dans le dépôt.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-workflow">Copier</button>
+            <pre id="cmd09-workflow">name: app-react
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: app-react-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  deployer:
+    needs: verifier
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run build
+      - name: Installer la clé de déploiement
+        env:
+          CLE: ${{ secrets.DEPLOY_SSH_KEY_REACT }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploy_react
+          chmod 600 ~/.ssh/deploy_react
+      - name: Déployer
+        run: bash scripts/deploy-react.sh</pre>
+          </div>
+
+          <p>
+            <code>needs: verifier</code> crée la dépendance&nbsp;: <code>deployer</code> ne
+            <em>commence</em> pas si <code>verifier</code> a échoué. <code>if: github.ref ==
+            'refs/heads/main'</code> empêche tout déploiement depuis une branche de travail.
+            <code>concurrency</code> annule l'exécution précédente devenue inutile&nbsp;: deux
+            déploiements simultanés sur la même application se marcheraient dessus.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> une proposition de modification déclenche le
+              pipeline, l'étape <code>verifier</code> s'exécute, et l'étape
+              <code>deployer</code> est <em>ignorée</em>, avec la mention «&nbsp;skipped&nbsp;».</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si l'étape <code>deployer</code> se lance
+              sur une branche de travail, la condition est mal écrite. Si l'étape
+              <code>verifier</code> échoue alors que les tests passent en local, la différence
+              vient de l'environnement d'exécution&nbsp;: comparez la version du langage et les
+              variables d'environnement définies des deux côtés.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — clé de déploiement                                -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Une clé de déploiement, aucun sudo</h2>
+            <p><strong>Objectif&nbsp;:</strong> que le pipeline puisse écrire dans son application, et rien d'autre.</p>
+          </div>
+
+          <p>
+            Le pipeline se connecte en <code>deploy-react</code>, avec une clé
+            <strong>dédiée</strong>, distincte de la vôtre. Ce compte appartient déjà au groupe
+            de l'application et possède son dossier&nbsp;: il n'a donc besoin d'<strong>aucun</strong>
+            droit d'administration pour publier. C'est la décision du référentiel&nbsp;: aucune
+            entrée <code>sudoers</code> n'est créée pour les comptes <code>deploy-*</code>.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> générez la paire de clés sur votre poste, puis installez la clé publique sur le serveur.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">puis serveur</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-keygen">Copier</button>
+            <pre id="cmd09-keygen">ssh-keygen -t ed25519 -C "pipeline app-react" -f ~/.ssh/deploy_react -N ""
+ssh-copy-id -i ~/.ssh/deploy_react.pub deploy-react@app-react.exemple.fr</pre>
+          </div>
+
+          <p>
+            <code>-N ""</code> crée une clé <strong>sans</strong> phrase secrète&nbsp;: c'est
+            acceptable ici parce que la clé privée ne vit pas sur votre poste mais dans les
+            secrets du pipeline. La clé privée <code>~/.ssh/deploy_react</code> sera copiée dans
+            le secret <code>DEPLOY_SSH_KEY_REACT</code>, puis supprimée de votre poste.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>Une clé de pipeline est un secret d'accès direct au serveur.</strong> Elle
+            doit être&nbsp;: dédiée à un seul compte, sans phrase secrète donc stockée
+            <em>uniquement</em> dans le coffre de secrets de la forge, révocable en une
+            opération (retirer sa ligne du fichier <code>authorized_keys</code>), et jamais
+            imprimée dans un journal de pipeline.
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Ne prenez pas une empreinte d'hôte sans la vérifier.</strong> Une commande
+            comme <code>ssh-keyscan</code> ajoute la clé de <em>n'importe quel</em> serveur qui
+            répond à cette adresse. La bonne pratique est de relever l'empreinte de votre serveur
+            (l'hébergeur l'affiche souvent dans sa console) et de l'écrire dans le
+            <code>known_hosts</code> du pipeline.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> prouvez que ce compte n'a aucun privilège.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-no-sudo">Copier</button>
+            <pre id="cmd09-no-sudo">sudo -l -U deploy-react
+ssh -i ~/.ssh/deploy_react deploy-react@app-react.exemple.fr "sudo -n true"</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>sudo -l -U deploy-react</code> répond
+              que l'utilisateur n'est pas autorisé à exécuter sudo, et la seconde commande
+              échoue avec <code>sudo: a password is required</code>&nbsp;: c'est le résultat
+              <strong>attendu</strong>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si <code>sudo -l -U deploy-react</code>
+              liste une autorisation, n'allez pas plus loin&nbsp;: une entrée a été ajoutée par
+              erreur, dans <code>/etc/sudoers</code> ou dans <code>/etc/sudoers.d/</code>. Faites-la
+              relire par une seconde personne avant de la retirer.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — déployer une livraison                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Déployer une livraison et basculer <code>current</code></h2>
+            <p><strong>Objectif&nbsp;:</strong> publier du nouveau code sans jamais écraser la version qui fonctionne.</p>
+          </div>
+
+          <p>
+            La règle tient en une phrase&nbsp;: <strong>on n'écrit jamais dans la livraison
+            active</strong>. Le pipeline crée un dossier horodaté, y copie les fichiers, puis
+            déplace le lien <code>current</code> — une opération quasi instantanée.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> déclarez l'hôte de déploiement sur le poste du pipeline, puis écrivez le script.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-sshconfig">Copier</button>
+            <pre id="cmd09-sshconfig">Host deploiement-react
+    HostName app-react.exemple.fr
+    User deploy-react
+    IdentityFile ~/.ssh/deploy_react
+    IdentitiesOnly yes</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-script">Copier</button>
+            <pre id="cmd09-script">#!/usr/bin/env bash
+# scripts/deploy-react.sh — exécuté par le pipeline, connecté en deploy-react
+set -euo pipefail
+
+APP="/srv/apps/react-app"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+RELEASE="$APP/releases/$STAMP"
+
+echo "Livraison : $RELEASE"
+
+ssh deploiement-react "mkdir -p '$RELEASE'"
+rsync -az --delete ./dist/ deploiement-react:"$RELEASE/dist/"
+rsync -az ./server/ ./package.json ./package-lock.json deploiement-react:"$RELEASE/"
+
+ssh deploiement-react "ln -sfn '$RELEASE' '$APP/current'"
+ssh deploiement-react "readlink -f '$APP/current'"</pre>
+          </div>
+
+          <p>
+            <code>set -euo pipefail</code> arrête le script à la première erreur au lieu de
+            continuer dans un état douteux. <code>ln -sfn</code> remplace le lien existant
+            (<code>-f</code>) sans créer de lien imbriqué (<code>-n</code>)&nbsp;: le remplacement
+            est atomique, donc aucun visiteur ne tombe sur un dossier incomplet.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> rendez le script exécutable et vérifiez l'ordre des livraisons.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-verif-livraison">Copier</button>
+            <pre id="cmd09-verif-livraison">ls -1 /srv/apps/react-app/releases
+readlink -f /srv/apps/react-app/current
+curl -sI https://app-react.exemple.fr | head -n 1</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>releases/</code> contient la nouvelle
+              livraison horodatée <em>en plus</em> des précédentes, <code>current</code> pointe
+              vers la plus récente, et le domaine répond <code>200</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si l'ancienne livraison a disparu, un
+              <code>rsync --delete</code> visait le mauvais dossier&nbsp;: il ne doit jamais cibler
+              <code>releases/</code> entier, seulement le sous-dossier de la livraison en cours.
+              Si <code>current</code> pointe vers un dossier vide, le lien a été créé avant la
+              copie des fichiers&nbsp;: rétablissez l'ordre — copier, puis basculer.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — migrations                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Migrations MariaDB réversibles</h2>
+            <p><strong>Objectif&nbsp;:</strong> modifier le schéma avec un compte dédié, après une sauvegarde, et savoir annuler.</p>
+          </div>
+
+          <p>
+            Le code d'une application n'est jamais le seul à changer&nbsp;: le schéma de sa base
+            évolue aussi. Une migration est un fichier SQL versionné <em>avec</em> le code, qui
+            s'exécute une seule fois. Trois comptes distincts existent côté base&nbsp;:
+            <code>user_react</code> lit et écrit les données, <code>migrate_react</code> modifie
+            la structure, et aucun des deux n'administre le serveur MariaDB.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> sauvegardez avant de toucher au schéma, puis exécutez la migration.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">en deux temps, jamais en un</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-migration">Copier</button>
+            <pre id="cmd09-migration">mariadb-dump -u migrate_react -p app_react > ~/avant-migration-$(date +%Y%m%d-%H%M).sql
+ls -lh ~/avant-migration-*.sql
+mariadb -u migrate_react -p app_react &lt; migrations/20261017-ajout-colonne.sql</pre>
+          </div>
+
+          <p>
+            <code>-p</code> sans valeur affiche une invite&nbsp;: le mot de passe ne se retrouve
+            ni dans l'historique du shell, ni dans la liste des processus. Cette sauvegarde
+            immédiate est votre filet pour les prochaines minutes&nbsp;; le module 10 en fera une
+            routine complète et vérifiée.
+          </p>
+
+          <div class="callout callout--warn">
+            <strong>Une migration doit être écrite pour être annulable.</strong> Avant de
+            l'exécuter, écrivez la requête inverse (<code>DROP COLUMN</code> annule
+            <code>ADD COLUMN</code>). Une colonne supprimée ne se récupère que depuis la
+            sauvegarde — et si personne n'a testé la restauration, elle n'existe pas vraiment.
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ce qui n'est jamais réversible automatiquement</strong>&nbsp;: une suppression
+            de colonne, un changement de type qui tronque des valeurs, une fusion de lignes. Ces
+            opérations exigent une sauvegarde <em>dont la restauration a déjà été testée</em>.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> le fichier de sauvegarde existe et n'est pas
+              vide, la migration se termine sans erreur, et l'application répond toujours
+              <code>200</code> après la modification du schéma.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Access denied</code> signifie que
+              vous avez utilisé <code>user_react</code> au lieu de <code>migrate_react</code>&nbsp;:
+              c'est précisément la séparation attendue. Une migration interrompue à mi-chemin ne
+              se relance pas à l'aveugle&nbsp;: restaurez la sauvegarde, corrigez le script, puis
+              réessayez.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — déclencher, vérifier, revenir                     -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Déclencher, vérifier, revenir en arrière</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'un retour arrière soit un geste connu, rapide et sans surprise.</p>
+          </div>
+
+          <p><strong>Le redémarrage n'appartient pas au compte de déploiement.</strong> Publier des fichiers ne demande aucun privilège&nbsp;; faire redémarrer un service, si. Voici ce que cela implique concrètement&nbsp;:</p>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Redémarrage nécessaire après déploiement, par application</caption>
+              <thead>
+                <tr><th scope="col">Application</th><th scope="col">Redémarrage</th><th scope="col">Qui agit</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">A — React (statique)</th>
+                  <td>Aucun&nbsp;: Nginx relit les fichiers</td>
+                  <td>Personne</td>
+                </tr>
+                <tr>
+                  <th scope="row">A — API Express</th>
+                  <td>Obligatoire&nbsp;: le processus garde l'ancien code en mémoire</td>
+                  <td>Administrateur&nbsp;: <code>sudo systemctl restart app-react-api</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">B — PHP</th>
+                  <td>Aucun, mais le cache d'opcodes doit être vidé</td>
+                  <td>Administrateur&nbsp;: <code>sudo systemctl reload php8.4-fpm</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">C — FastAPI / Uvicorn</th>
+                  <td>Obligatoire&nbsp;: code et environnement virtuel chargés au démarrage</td>
+                  <td>Administrateur&nbsp;: <code>sudo systemctl restart app-python-web</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Deux options, à trancher explicitement.</strong>
+            <br>
+            <strong>Option A — le référentiel actuel.</strong> Les comptes <code>deploy-*</code>
+            n'ont aucun droit sudo&nbsp;: le pipeline s'arrête après la bascule de
+            <code>current</code> et l'administrateur lance le redémarrage. Simple, vérifiable,
+            mais l'automatisation est incomplète de quelques secondes.
+            <br>
+            <strong>Option B — ouvrir un droit étroit.</strong> Ajouter une entrée
+            <code>sudoers</code> limitée à une seule commande,
+            <code>/bin/systemctl restart app-react-api.service</code>, puis la tester avec
+            <code>sudo -l -U deploy-react</code>. Le pipeline redémarre lui-même. Le coût est
+            réel&nbsp;: ce droit devient une surface d'attaque, et un motif trop large
+            (par exemple un caractère générique) autoriserait bien plus que prévu.
+            <br>
+            <strong>Choisissez, écrivez le choix, et gardez la trace&nbsp;:</strong> une
+            automatisation à moitié documentée est plus dangereuse qu'une automatisation absente.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> déployez une modification, vérifiez-la, puis exercez le retour arrière.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-verif-deploy">Copier</button>
+            <pre id="cmd09-verif-deploy">ssh deploiement-react "readlink -f /srv/apps/react-app/current"
+curl -sI https://app-react.exemple.fr | head -n 1
+curl -s https://app-react.exemple.fr/api/health</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd09-rollback">Copier</button>
+            <pre id="cmd09-rollback">ls -1 /srv/apps/react-app/releases
+ssh deploiement-react "ln -sfn /srv/apps/react-app/releases/20261017-1010 /srv/apps/react-app/current"
+ssh deploiement-react "readlink -f /srv/apps/react-app/current"</pre>
+          </div>
+
+          <p>
+            Le retour arrière ne reconstruit rien et ne restaure rien&nbsp;: il <em>repointe</em>
+            le lien vers une livraison qui a déjà tourné. C'est pourquoi chaque livraison reste
+            sur le disque&nbsp;: les cinq dernières versions réussies sont conservées, ce qui
+            laisse toujours une cible de repli.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> après la bascule, <code>readlink -f</code>
+              renvoie l'ancienne livraison, le domaine répond de nouveau, et vous savez à quelle
+              version vous êtes revenu. Le retour arrière a été <strong>exécuté</strong>, pas
+              seulement imaginé.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si l'ancienne livraison a été purgée, le
+              retour arrière est impossible&nbsp;: c'est un incident, pas un détail. Vérifiez la
+              politique de rétention de cinq versions et contrôlez qu'elle est réellement
+              appliquée. Un retour arrière de code ne défait <em>jamais</em> une migration de
+              base&nbsp;: le schéma doit rester compatible avec la version précédente du code.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Le pipeline déploie mais l'ancien code reste servi</th>
+                  <td>Le service n'a pas redémarré, ou <code>current</code> n'a pas bougé</td>
+                  <td><code>readlink -f</code> sur <code>current</code>, puis redémarrage selon le tableau ci-dessus</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Permission denied (publickey)</code></th>
+                  <td>Mauvaise clé, ou compte de destination erroné</td>
+                  <td>Vérifiez l'hôte déclaré et la ligne correspondante dans <code>authorized_keys</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Deux déploiements se marchent dessus</th>
+                  <td>Aucune limitation de concurrence</td>
+                  <td>Ajoutez un groupe de concurrence, avec annulation de l'exécution précédente</td>
+                </tr>
+                <tr>
+                  <th scope="row">La migration a réussi, l'application échoue</th>
+                  <td>Le code déployé ne correspond pas au nouveau schéma</td>
+                  <td>Rétablissez la version précédente du code, puis décidez si la migration est annulée</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le disque se remplit après quelques semaines</th>
+                  <td>Les livraisons s'accumulent sans purge</td>
+                  <td>Vérifiez la rétention sur cinq versions et supprimez les plus anciennes</td>
+                </tr>
+                <tr>
+                  <th scope="row">Un secret apparaît dans les journaux du pipeline</th>
+                  <td>Une commande affiche son environnement d'exécution</td>
+                  <td>Considérez le secret comme exposé et régénérez-le, puis masquez la sortie</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les neuf points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Chaque application a son pipeline, avec la même séquence tests, build, déploiement.</span></li>
+            <li><span>Le déploiement est <em>impossible</em> depuis une branche de travail.</span></li>
+            <li><span>Une clé de déploiement dédiée existe, et <code>sudo -l -U deploy-react</code> ne renvoie aucun droit.</span></li>
+            <li><span>Aucune entrée <code>sudoers</code> n'existe pour les comptes <code>deploy-*</code>.</span></li>
+            <li><span>Le déploiement crée une livraison horodatée et ne modifie jamais la livraison active.</span></li>
+            <li><span>Les migrations utilisent le compte de migration, jamais le compte d'exécution.</span></li>
+            <li><span>Une sauvegarde précède chaque migration, et sa restauration a déjà été testée.</span></li>
+            <li><span>Le retour arrière a été exécuté au moins une fois, avec succès.</span></li>
+            <li><span>Le choix concernant le redémarrage (option A ou B) est écrit et assumé.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 10 protège ce que tout ceci fait tourner&nbsp;:
+            les données. Sauvegardes automatiques, restauration vérifiée, et rotation des journaux.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 09</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S18</td><td>GitHub Actions (FR) — workflows, secrets, concurrence</td><td><code>https://docs.github.com/fr/actions</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S2</td><td>Documentation officielle Debian</td><td><code>https://www.debian.org/doc/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S24</td><td>RFC 5737 — adresses IPv4 de documentation</td><td><code>https://www.rfc-editor.org/rfc/rfc5737</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man rsync</code> · <code>man ssh_config</code> · <code>man mariadb-dump</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">
+            La syntaxe YAML et les noms d'actions cités sont donnés comme <em>exemple</em> issu de la
+            documentation GitHub Actions&nbsp;: cette dernière sert d'illustration de forge, et ses clés
+            peuvent évoluer. Les sorties de terminal sont décrites, non recopiées d'un pipeline réel.
+            Aucun déploiement automatisé n'a été exécuté pour rédiger ce module.
+          </p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("09");
+  </script>
+</body>
+</html>

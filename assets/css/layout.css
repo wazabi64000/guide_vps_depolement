@@ -1,0 +1,139 @@
+/* ==========================================================================
+   layout.css — structure de page : en-tête, conteneur, grilles, pied de page
+   VPS Academy 2026
+   ========================================================================== */
+
+/* --- Conteneur ------------------------------------------------------------- */
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: var(--sp-4);
+}
+
+/* --- En-tête --------------------------------------------------------------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__inner {
+  min-height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding-block: var(--sp-2);
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  white-space: nowrap;
+}
+.brand:hover { color: var(--accent-strong); }
+.brand__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.header-nav {
+  display: flex;
+  gap: var(--sp-4);
+  margin-left: auto;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.header-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+}
+.header-nav a:hover { color: var(--text); background: var(--surface-2); }
+.header-nav a[aria-current="page"] { color: var(--accent-strong); font-weight: 600; }
+
+/* --- Bandeau (hero) -------------------------------------------------------- */
+.hero {
+  padding-block: var(--sp-7);
+  border-bottom: 1px solid var(--border);
+}
+.hero .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+.hero p.lead { font-size: 1.05rem; color: var(--text-muted); max-width: 68ch; }
+
+/* --- Sections -------------------------------------------------------------- */
+.section { padding-block: var(--sp-6); }
+.section__head { max-width: 72ch; }
+.section__head p { color: var(--text-muted); }
+
+/* --- Grilles --------------------------------------------------------------- */
+.grid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  margin-top: var(--sp-5);
+}
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+
+/* --- Mise en page avec aside (réutilisée par les pages de cours) ----------- */
+.layout { display: grid; gap: var(--sp-6); grid-template-columns: 1fr; }
+
+/* Les enfants de .layout sont des éléments de grille. Leur taille minimale
+   automatique vaut leur « min-content » : un contenu large et insécable
+   (tableau, bloc de code, longue liste) peut donc élargir la piste au-delà de
+   la place disponible et faire déborder toute la page horizontalement.
+   `min-width: 0` rend la piste rétrécissable et laisse le contenu se replier. */
+.layout > * { min-width: 0; }
+
+@media (min-width: 960px) {
+  .layout--aside { grid-template-columns: 260px 1fr; align-items: start; }
+  .layout__aside { position: sticky; top: calc(var(--header-h) + var(--sp-4)); }
+}
+
+/* --- Pied de page ---------------------------------------------------------- */
+.site-footer {
+  margin-top: var(--sp-7);
+  padding-block: var(--sp-6);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.site-footer a { color: var(--text-muted); }
+
+/* --- Barre d'outils -------------------------------------------------------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  margin-top: var(--sp-4);
+}
+
+/* --- Responsive ------------------------------------------------------------ */
+@media (max-width: 560px) {
+  .header-nav { gap: var(--sp-2); }
+  .hero { padding-block: var(--sp-5); }
+}

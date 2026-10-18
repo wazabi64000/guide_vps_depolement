@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 02 — Installer et administrer Debian 13 : compte administrateur nominatif, sudo, utilisateurs, groupes, permissions Unix, umask, fichiers sensibles et mises à jour APT.">
+  <meta name="color-scheme" content="light">
+  <title>Module 02 — Installer et administrer Debian 13 · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-1">Comptes</a>
+        <a href="#etape-4">Secrets</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 02 · Administrer la machine</p>
+      <h1 id="titre">Installer et administrer Debian&nbsp;13</h1>
+      <p class="lead">
+        Un serveur ne se gère pas avec un compte partagé. Ce module crée un compte
+        administrateur nominatif, montre comment lire et régler les permissions Unix,
+        et met le système à jour sans casser l'accès.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 02</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Modifie la machine</span> votre serveur, pas celui d'un autre</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 01</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Ce module modifie le système.</strong> Chaque commande s'exécute sur une
+        machine <strong>dont vous êtes responsable</strong>. Conservez toujours un accès
+        fonctionnel (session ouverte, console de secours de l'hébergeur) avant de modifier
+        les comptes ou l'authentification.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Valeurs fictives.</strong> Les exemples utilisent <code>admin</code> comme
+        nom de compte et <code>192.0.2.10</code> (RFC&nbsp;5737) comme adresse. Remplacez-les
+        par vos valeurs réelles.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 02">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Compte administrateur nominatif</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Lire les permissions Unix</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — umask et droits par défaut</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Protéger un fichier sensible</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Mettre à jour Debian</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, vous administrez Debian&nbsp;13 avec un compte
+              nominatif, des droits maîtrisés et un système à jour.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Créer</strong> un compte administrateur nominatif et vérifier son droit <code>sudo</code>.</span></li>
+            <li><span><strong>Lire</strong> une ligne de permissions et savoir la traduire.</span></li>
+            <li><span><strong>Régler</strong> les droits par défaut avec <code>umask</code>.</span></li>
+            <li><span><strong>Protéger</strong> un fichier sensible par des droits minimaux.</span></li>
+            <li><span><strong>Mettre à jour</strong> le système avec APT sans casser l'accès.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Un seul compte à la fois.</strong> Un compte partagé ne dit jamais
+            <em>qui</em> a fait quoi. Un compte nominatif, oui : c'est la base de toute
+            traçabilité.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Trois choses avant de commencer.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Le <strong>module 01</strong> est terminé : une session SSH vérifiée s'ouvre sur la machine.</span></li>
+            <li><span>Vous disposez d'un compte capable d'utiliser <code>sudo</code> (ou d'un accès à la console de secours).</span></li>
+            <li><span>Vous savez ouvrir la <strong>console de secours</strong> de l'hébergeur : c'est le filet de sécurité si les comptes sont mal modifiés.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Règle de survie.</strong> Ne fermez jamais votre session actuelle avant
+            d'avoir ouvert une <strong>seconde session</strong> avec le nouveau compte et
+            vérifié qu'elle fonctionne.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — compte nominatif                                  -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Créer le compte administrateur nominatif</h2>
+            <p><strong>Objectif&nbsp;:</strong> disposer d'un compte personnel capable d'utiliser <code>sudo</code>, sans perdre l'accès actuel.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> relevez d'abord votre situation, puis créez le compte.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-id">Copier</button>
+            <pre id="cmd02-id">id
+sudo -v</pre>
+          </div>
+
+          <p>
+            <code>id</code> affiche votre utilisateur, votre UID et vos groupes. <code>sudo -v</code>
+            rafraîchit et teste le droit <code>sudo</code> : s'il passe sans erreur, votre accès
+            d'administration est confirmé.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> créez le compte nominatif et autorisez-le à administrer.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span> <span class="tag">nom à adapter</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-adduser">Copier</button>
+            <pre id="cmd02-adduser">sudo adduser admin
+sudo usermod -aG sudo admin</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-verif">Copier</button>
+            <pre id="cmd02-verif">id admin
+sudo -l -U admin</pre>
+          </div>
+
+          <p>
+            <code>adduser</code> crée le compte et demande un mot de passe : remplacez
+            <code>admin</code> par <strong>votre</strong> nom ou vos initiales. <code>usermod -aG sudo</code>
+            ajoute ce compte au groupe <code>sudo</code> ; le <code>-a</code> est essentiel, sinon
+            les autres groupes du compte seraient écrasés.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>id admin</code> liste <code>sudo</code> parmi les
+              groupes, et <code>sudo -l -U admin</code> affiche les commandes autorisées. Ouvrez
+              ensuite une <strong>nouvelle session</strong> avec ce compte et lancez <code>sudo -v</code>
+              avant de fermer celle-ci.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>admin is not in the sudoers file</code>
+              signifie que le compte n'est pas encore membre de <code>sudo</code>, ou que la session
+              est trop ancienne — déconnectez-vous et reconnectez-vous. Retour arrière&nbsp;:
+              <code>sudo deluser --remove-home admin</code>.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ne supprimez jamais le dernier compte capable de <code>sudo</code>.</strong>
+            Vérifiez toujours qu'un second compte administrateur fonctionne avant d'en retirer un.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — permissions                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Lire et interpréter les permissions</h2>
+            <p><strong>Objectif&nbsp;:</strong> savoir qui peut lire, écrire ou exécuter un fichier.</p>
+          </div>
+
+          <p>
+            Chaque fichier a <strong>un propriétaire</strong>, <strong>un groupe</strong> et
+            <strong>trois séries de droits</strong> : pour le propriétaire (<code>u</code>), le
+            groupe (<code>g</code>) et les autres (<code>o</code>). Chaque série vaut
+            <code>r</code> (lire), <code>w</code> (écrire), <code>x</code> (exécuter).
+          </p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-perms-demo">Copier</button>
+            <pre id="cmd02-perms-demo">install -d -m 750 ~/demo-perms
+touch ~/demo-perms/rapport.txt
+chmod 640 ~/demo-perms/rapport.txt
+ls -l ~/demo-perms</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-stat">Copier</button>
+            <pre id="cmd02-stat">stat -c '%a %U %G %n' ~/demo-perms/rapport.txt</pre>
+          </div>
+
+          <p>
+            La notation octale se lit chiffre par chiffre : <code>6</code> = lire + écrire
+            (<code>4+2</code>), <code>4</code> = lire seul, <code>0</code> = aucun droit. Donc
+            <code>640</code> = propriétaire <code>rw-</code>, groupe <code>r--</code>, autres
+            <code>---</code>. <code>750</code> ajoute le droit d'exécuter, nécessaire pour
+            <strong>traverser</strong> un répertoire.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>stat</code> renvoie <code>640</code> pour
+              <code>rapport.txt</code> et <code>750</code> pour le répertoire. Les deux commandes
+              disent la même chose sous deux formes : symbolique (<code>ls -l</code>) et octale
+              (<code>stat</code>).</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Operation not permitted</code> lors d'un
+              <code>chown</code> est normal : seul <code>root</code> peut changer le
+              <em>propriétaire</em> d'un fichier. Un simple <code>chmod</code> sur vos propres
+              fichiers ne demande pas <code>sudo</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — umask                                             -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — umask et droits par défaut</h2>
+            <p><strong>Objectif&nbsp;:</strong> que les nouveaux fichiers ne soient pas créés trop ouverts.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> lisez vos droits par défaut, puis durcissez-les.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la session</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-umask">Copier</button>
+            <pre id="cmd02-umask">umask
+umask -S
+umask 027
+touch ~/demo-perms/essai.txt
+stat -c '%a %n' ~/demo-perms/essai.txt</pre>
+          </div>
+
+          <p>
+            <code>umask</code> indique les droits <strong>retirés</strong> à la création :
+            <code>022</code> laisse un fichier en <code>644</code>. Une <code>umask</code> de
+            <code>027</code> donne <code>640</code> pour les fichiers et <code>750</code> pour les
+            répertoires — exactement la convention visée pour le projet.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>stat</code> renvoie <code>640</code> pour
+              <code>essai.txt</code>. Le changement ne dure que pour la session courante : pour le
+              rendre permanent, ajoutez <code>umask 027</code> à la fin de <code>~/.profile</code>
+              du compte concerné.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> si la valeur revient à l'ancienne après
+              reconnexion, c'est que <code>umask 027</code> n'a pas été écrit dans
+              <code>~/.profile</code>. Une <code>umask</code> trop restrictive (<code>077</code>)
+              peut empêcher un service de lire ses propres fichiers : vérifiez toujours avec le
+              compte d'exécution concerné.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — fichier sensible                                  -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Protéger un fichier sensible</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'un fichier de configuration ne soit lisible que par qui de droit.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez le répertoire du projet et un fichier d'exemple avec des droits minimaux.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-secret">Copier</button>
+            <pre id="cmd02-secret">sudo install -d -m 750 /srv/apps
+sudo install -m 640 /dev/null /srv/apps/exemple.env
+stat -c '%a %U %G %n' /srv/apps/exemple.env</pre>
+          </div>
+
+          <p>
+            <code>install</code> crée en fixant directement le mode : c'est plus sûr qu'un
+            <code>touch</code> suivi d'un <code>chmod</code>, qui laisse une fenêtre pendant
+            laquelle le fichier est trop ouvert. <code>/dev/null</code> sert seulement de source
+            vide pour créer le fichier.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>stat</code> affiche <code>640 root root</code>.
+              L'attribution du groupe applicatif (<code>root:reactapp</code>, etc.) interviendra au
+              module&nbsp;06, quand les groupes existeront.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Un secret lisible par tous est un secret public.</strong> Un
+            <code>chmod 644</code> sur un fichier d'environnement rend son contenu lisible par
+            n'importe quel compte de la machine. Aucun secret ne doit être versionné dans Git
+            (module&nbsp;08).
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Permission denied</code> sur
+              <code>/srv/apps</code> signifie que <code>sudo</code> a été oublié ; la création d'un
+              répertoire dans <code>/srv</code> est réservée à <code>root</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — mises à jour                                      -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Mettre à jour Debian en sécurité</h2>
+            <p><strong>Objectif&nbsp;:</strong> appliquer les correctifs sans surprise ni rupture de service.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> relevez ce qui est disponible avant d'appliquer.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-apt-lire">Copier</button>
+            <pre id="cmd02-apt-lire">sudo apt update
+apt list --upgradable
+df -h /</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> appliquez ensuite les mises à jour.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">modifie la machine</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd02-apt-upgrade">Copier</button>
+            <pre id="cmd02-apt-upgrade">sudo apt upgrade
+sudo apt autoremove --dry-run</pre>
+          </div>
+
+          <p>
+            <code>apt update</code> rafraîchit la liste des paquets ; <code>apt upgrade</code>
+            installe les versions disponibles sans supprimer de paquet. <code>df -h /</code> vérifie
+            que le disque a de la place, et le mode <code>--dry-run</code> montre ce que ferait un
+            nettoyage sans rien supprimer.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>apt list --upgradable</code> ne renvoie plus
+              de paquet en attente après la mise à jour, et le service choisi (SSH) répond toujours
+              — testez-le depuis une seconde session.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>dpkg was interrupted</code> se répare avec
+              <code>sudo dpkg --configure -a</code>. Espace insuffisant&nbsp;: lisez
+              <code>df -h /</code> et nettoyez le cache avec <code>sudo apt clean</code> — jamais en
+              supprimant une version applicative (module&nbsp;10).</p>
+          </div>
+
+          <div class="callout">
+            <strong>À savoir.</strong> <code>apt full-upgrade</code> peut <strong>supprimer</strong>
+            des paquets pour résoudre des dépendances. Lisez la liste affichée avant de confirmer.
+            Les avis de sécurité de Debian sont publiés sur <code>debian.org/security</code>.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>admin is not in the sudoers file</code></th>
+                  <td>Le compte n'est pas membre du groupe <code>sudo</code>, ou la session date d'avant l'ajout</td>
+                  <td>Vérifiez <code>id admin</code>, puis reconnectez-vous</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Permission denied</code> sur un fichier pourtant lisible</th>
+                  <td>Un répertoire parent n'a pas le droit <code>x</code> : le chemin est infranchissable</td>
+                  <td>Contrôlez chaque niveau du chemin avec <code>namei -l <em>chemin</em></code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Un service ne démarre plus après un <code>chmod</code></th>
+                  <td>Les droits ont été resserrés sous le seuil nécessaire au compte d'exécution</td>
+                  <td>Relevez le compte du service (<code>User=</code>) et testez la lecture avec lui</td>
+                </tr>
+                <tr>
+                  <th scope="row">Les nouveaux fichiers sont en <code>644</code></th>
+                  <td><code>umask 027</code> n'a pas été rendue permanente</td>
+                  <td>Ajoutez-la à la fin de <code>~/.profile</code> du compte concerné</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>dpkg was interrupted</code></th>
+                  <td>Une mise à jour précédente a été interrompue</td>
+                  <td><code>sudo dpkg --configure -a</code>, puis relancez la mise à jour</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le disque se remplit pendant une mise à jour</th>
+                  <td>Cache APT volumineux ou journaux qui grossissent</td>
+                  <td><code>df -h /</code>, <code>sudo apt clean</code>, puis contrôlez les journaux (module&nbsp;11)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les six points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Le compte administrateur <strong>nominatif</strong> existe et <code>id</code> le confirme.</span></li>
+            <li><span><code>sudo -l -U</code> sur ce compte montre un droit d'administration limité, et un test dans une seconde session réussit.</span></li>
+            <li><span>Vous savez traduire une permission symbolique (<code>drwxr-x---</code>) en valeur octale.</span></li>
+            <li><span>La <code>umask</code> cible (<code>027</code>) est appliquée et écrite dans le profil si elle doit durer.</span></li>
+            <li><span>Un fichier de configuration d'exemple est en <code>640</code>, jamais en <code>644</code>.</span></li>
+            <li><span>Le système est à jour, le disque a de la place, et l'accès SSH fonctionne toujours.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 03 durcit l'accès&nbsp;: clé SSH,
+            désactivation de la connexion directe de <code>root</code>, comptes de déploiement
+            et pare-feu couvrant IPv4 et IPv6.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 02</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S2</td><td>Documentation officielle Debian</td><td><code>https://www.debian.org/doc/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S3</td><td>Debian Handbook (administration, paquets, services)</td><td><code>https://www.debian.org/doc/manuals/debian-handbook/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S5c</td><td>Avis de sécurité Debian</td><td><code>https://www.debian.org/security/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man adduser</code> · <code>man chmod</code> · <code>man apt</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un serveur réel.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("02");
+  </script>
+</body>
+</html>

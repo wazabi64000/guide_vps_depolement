@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 05 — Installer Nginx, MariaDB et phpMyAdmin : runtimes Node, PHP-FPM et Python, MariaDB liée à la boucle locale, trois bases, six utilisateurs SQL au moindre privilège, phpMyAdmin accessible par tunnel SSH.">
+  <meta name="color-scheme" content="light">
+  <title>Module 05 — Installer Nginx, MariaDB et phpMyAdmin · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-3">MariaDB</a>
+        <a href="#etape-5">phpMyAdmin</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 05 · Installer la pile partagée</p>
+      <h1 id="titre">Installer Nginx, MariaDB et phpMyAdmin</h1>
+      <p class="lead">
+        Les trois applications partageront un serveur web, une base de données et un outil
+        d'administration. Ce module installe le socle, crée une base et deux comptes SQL
+        par application, et garde l'administration hors d'Internet.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 05</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Installe des paquets</span> et crée des bases</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> modules 02 et 03</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Rien de ce qui est installé ici ne doit s'exposer publiquement.</strong> Ni la
+        base de données, ni l'outil d'administration SQL. Le serveur web, lui, sera publié plus
+        tard (module&nbsp;07), et seulement sur <code>80</code> et <code>443</code>.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Aucun mot de passe dans cette page.</strong> Les blocs copiables contiennent des
+        <strong>emplacements</strong> (<code>&lt;MOT_DE_PASSE_EXECUTION&gt;</code>) que vous
+        remplacez par des secrets générés localement. Ne collez jamais un mot de passe réel dans
+        un texte copié depuis une page web.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 05">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Nginx, PHP-FPM et Python</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Node.js</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — MariaDB sur la boucle locale</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Trois bases, six utilisateurs</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — phpMyAdmin par tunnel SSH</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, les runtimes sont installés, une base et deux comptes SQL
+              existent par application, et phpMyAdmin n'est joignable que depuis le serveur.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Installer</strong> Nginx, PHP-FPM, Python et Node.js.</span></li>
+            <li><span><strong>Installer</strong> MariaDB depuis les paquets Debian et la lier à la boucle locale.</span></li>
+            <li><span><strong>Créer</strong> trois bases, trois comptes d'exécution et trois comptes de migration.</span></li>
+            <li><span><strong>Installer</strong> phpMyAdmin sans l'exposer, et préparer l'accès par tunnel SSH.</span></li>
+            <li><span><strong>Vérifier</strong> qu'aucun service interne n'écoute sur une adresse publique.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Deux comptes SQL par application, pourquoi&nbsp;?</strong> Le compte
+            <em>d'exécution</em> lit et écrit des données&nbsp;; le compte de <em>migration</em>
+            peut modifier la structure, mais n'est utilisé que pendant un déploiement. L'application
+            qui tourne n'a jamais besoin de supprimer une table.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Deux modules doivent être terminés.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 02&nbsp;: le système est administré et à jour.</span></li>
+            <li><span>Module 03&nbsp;: l'accès est durci et le pare-feu n'ouvre que <code>22</code>, <code>80</code> et <code>443</code>.</span></li>
+            <li><span>Vous savez générer un secret aléatoire&nbsp;: <code>openssl rand -base64 24</code>.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Notez chaque secret dans un gestionnaire de mots de passe</strong> au moment
+            où vous le générez. Un mot de passe de base de données perdu se régénère&nbsp;;
+            un mot de passe perdu pendant une migration vous coûte une soirée.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — Nginx, PHP-FPM, Python                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Installer Nginx, PHP-FPM et Python</h2>
+            <p><strong>Objectif&nbsp;:</strong> disposer du serveur web et des deux runtimes côté serveur.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> installez les paquets Debian.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">installe des paquets</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-apt">Copier</button>
+            <pre id="cmd05-apt">sudo apt install nginx php-fpm python3-venv python3-pip</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-versions">Copier</button>
+            <pre id="cmd05-versions">nginx -v
+php -v
+python3 --version
+systemctl status nginx --no-pager</pre>
+          </div>
+
+          <p>
+            <code>nginx -v</code>, <code>php -v</code> et <code>python3 --version</code> affichent
+            les versions <strong>effectivement installées par Debian</strong>&nbsp;: ce sont elles
+            qui comptent, pas la dernière version publiée en amont. Notez-les&nbsp;: les chemins de
+            configuration en dépendent (par exemple <code>/etc/php/8.4/</code> pour PHP&nbsp;8.4).
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les trois versions s'affichent et
+              <code>systemctl status nginx</code> indique <code>active (running)</code>. Le numéro
+              du dossier <code>/etc/php/&lt;version&gt;/</code> correspond à la version affichée par
+              <code>php -v</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>nginx -v</code> introuvable ou
+              <code>nginx: command not found</code> signifie que le paquet n'est pas installé&nbsp;:
+              relancez <code>sudo apt install nginx</code> et lisez le message d'erreur.
+              <code>Unable to locate package</code>&nbsp;: commencez par <code>sudo apt update</code>
+              (module&nbsp;02).</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — Node.js                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Node.js pour l'application React + Express</h2>
+            <p><strong>Objectif&nbsp;:</strong> exécuter l'API Express en Node.js, avec une version adaptée.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> installez Node.js depuis Debian, puis relevez la version.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">installe des paquets</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-node">Copier</button>
+            <pre id="cmd05-node">sudo apt install nodejs npm
+node -v
+npm -v</pre>
+          </div>
+
+          <p>
+            Le paquet Debian est <strong>maintenu et corrigé</strong>, mais il peut être plus ancien
+            que la version LTS publiée par le projet. Comparez <code>node -v</code> avec la LTS
+            annoncée sur <code>nodejs.org</code>&nbsp;: si votre application exige une version plus
+            récente, suivez <em>les instructions officielles</em> du projet Node.js — jamais un
+            tutoriel trouvé au hasard.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>node -v</code> et <code>npm -v</code>
+              répondent tous les deux. Notez la version obtenue&nbsp;: elle sera rappelée au
+              module&nbsp;06 pour le service Express.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>node: command not found</code> après
+              l'installation&nbsp;: vérifiez que vous êtes bien sur le serveur et non sur votre poste.
+              N'installez <strong>jamais</strong> deux Node.js en parallèle (paquet Debian
+              <em>et</em> une installation manuelle)&nbsp;: les chemins deviennent imprévisibles au
+              moment où un service systemd démarre.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — MariaDB boucle locale                             -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Installer MariaDB et la lier à la boucle locale</h2>
+            <p><strong>Objectif&nbsp;:</strong> une seule instance MariaDB, joignable uniquement depuis le serveur lui-même.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> installez depuis les paquets Debian, puis sécurisez l'installation.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">installe des paquets</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-mariadb">Copier</button>
+            <pre id="cmd05-mariadb">sudo apt install mariadb-server
+mariadb --version
+sudo mariadb-secure-installation</pre>
+          </div>
+
+          <p>
+            <code>mariadb-secure-installation</code> vous guide pour supprimer les comptes anonymes et
+            interdire la connexion distante du compte d'administration. Acceptez les réglages
+            proposés&nbsp;: ils vont dans le sens de ce cours.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> vérifiez qu'elle n'écoute que sur la boucle locale.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-mariadb-bind">Copier</button>
+            <pre id="cmd05-mariadb-bind">sudo grep -R bind-address /etc/mysql/
+sudo ss -lntp</pre>
+          </div>
+
+          <p>
+            <code>bind-address</code> doit valoir <code>127.0.0.1</code>. Dans la sortie de
+            <code>ss -lntp</code>, cherchez la ligne de MariaDB&nbsp;: l'adresse d'écoute doit être
+            <code>127.0.0.1</code>, jamais une interface publique.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> le fichier de configuration déclare
+              <code>bind-address = 127.0.0.1</code>, et <code>ss -lntp</code> ne montre MariaDB que
+              sur la boucle locale. Le pare-feu (module&nbsp;03) ne comporte aucune règle
+              l'autorisant depuis Internet.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ne modifiez jamais <code>bind-address</code> vers <code>0.0.0.0</code>.</strong>
+            Ce réglage publierait la base sur toutes les interfaces réseau, y compris IPv6. Un port
+            fermé en IPv4 ne suffit pas&nbsp;: vérifiez toujours l'écoute complète avec
+            <code>ss -lntp</code>.
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Access denied</code> en local vient
+              souvent d'un mot de passe de compte d'administration défini par le paquet. Sur Debian,
+              l'administration locale passe par le socket Unix&nbsp;: <code>sudo mariadb</code>
+              fonctionne sans mot de passe, ce qui est le comportement attendu.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — bases et utilisateurs                             -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Trois bases, six utilisateurs SQL</h2>
+            <p><strong>Objectif&nbsp;:</strong> chaque application a sa base et deux comptes, au moindre privilège.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> générez six secrets sur le serveur, un par compte.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-secrets">Copier</button>
+            <pre id="cmd05-secrets">openssl rand -base64 24</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> ouvrez la console SQL et créez les trois bases.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">crée des bases</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-sql-console">Copier</button>
+            <pre id="cmd05-sql-console">sudo mariadb</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-sql-bases">Copier</button>
+            <pre id="cmd05-sql-bases">CREATE DATABASE app_react  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE app_php    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE app_python CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez les deux comptes de l'application A, puis les privilèges correspondants.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-sql-users">Copier</button>
+            <pre id="cmd05-sql-users">CREATE USER 'user_react'@'localhost'    IDENTIFIED BY '&lt;MOT_DE_PASSE_EXECUTION&gt;';
+CREATE USER 'migrate_react'@'localhost' IDENTIFIED BY '&lt;MOT_DE_PASSE_MIGRATION&gt;';
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON app_react.* TO 'user_react'@'localhost';
+
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
+  ON app_react.* TO 'migrate_react'@'localhost';
+
+FLUSH PRIVILEGES;</pre>
+          </div>
+
+          <p>
+            Répétez ce bloc pour <code>php</code> (base <code>app_php</code>) puis pour
+            <code>python</code> (base <code>app_python</code>), en remplaçant les noms et les mots de
+            passe. Aucun <code>GRANT ALL</code>, aucune portée <code>*.*</code>&nbsp;: chaque compte
+            ne voit que sa base.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>SHOW DATABASES;</code> liste les trois bases
+              et <code>SELECT user, host FROM mysql.user;</code> montre les six comptes attendus.
+              Chaque <code>user_*</code> n'a que quatre droits, sur une seule base.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Access denied for user ... to database
+              'app_php'</code> est le comportement <strong>attendu</strong> si vous testez un compte
+              sur la base d'une autre application&nbsp;: c'est la séparation qui fonctionne.
+              <code>ERROR 1396</code> signifie que le compte existe déjà&nbsp;: utilisez
+              <code>ALTER USER</code> plutôt que <code>CREATE USER</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — phpMyAdmin tunnel                                 -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — phpMyAdmin accessible par tunnel SSH</h2>
+            <p><strong>Objectif&nbsp;:</strong> administrer la base depuis son navigateur, sans jamais l'exposer sur Internet.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> installez phpMyAdmin, puis créez un accès <em>local</em>.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">installe des paquets</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma">Copier</button>
+            <pre id="cmd05-pma">sudo apt install phpmyadmin</pre>
+          </div>
+
+          <p>
+            Refusez la configuration automatique du serveur web pendant l'installation&nbsp;: nous
+            écrivons nous-mêmes un hôte qui n'écoute que sur la boucle locale, sur un port
+            réservé.
+          </p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-vhost">Copier</button>
+            <pre id="cmd05-pma-vhost">sudoedit /etc/nginx/sites-available/phpmyadmin-local.conf</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-vhost-contenu">Copier</button>
+            <pre id="cmd05-pma-vhost-contenu">server {
+    listen 127.0.0.1:8443;
+    server_name localhost;
+
+    root /usr/share/phpmyadmin;
+    index index.php;
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/app-pma.sock;
+    }
+}</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez un pool PHP-FPM dédié, avec un compte sans droits sur les applications.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-pool-editor">Copier</button>
+            <pre id="cmd05-pma-pool-editor">sudoedit /etc/php/8.4/fpm/pool.d/app-pma.conf</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-pool">Copier</button>
+            <pre id="cmd05-pma-pool">[app-pma]
+user = svc-php
+group = phpapp
+listen = /run/php/app-pma.sock
+listen.owner = www-data
+listen.group = www-data
+pm = dynamic
+pm.max_children = 5</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> activez l'hôte, testez, rechargez.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-activer">Copier</button>
+            <pre id="cmd05-pma-activer">sudo ln -s /etc/nginx/sites-available/phpmyadmin-local.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo systemctl restart php8.4-fpm</pre>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> depuis votre poste local, ouvrez le tunnel.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">ouvre un tunnel</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd05-pma-tunnel">Copier</button>
+            <pre id="cmd05-pma-tunnel">ssh -L 8443:127.0.0.1:8443 admin@192.0.2.10</pre>
+          </div>
+
+          <p>
+            Laissez cette fenêtre ouverte, puis ouvrez <code>http://localhost:8443</code> dans votre
+            navigateur&nbsp;: le trafic passe par SSH, chiffré, sans qu'aucun port ne soit ouvert
+            sur Internet.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>nginx -t</code> valide la configuration, et
+              l'authentification de phpMyAdmin est de type <code>cookie</code>. Depuis
+              <em>l'extérieur</em>, l'adresse <code>192.0.2.10:8443</code> doit être
+              <strong>injoignable</strong>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une <code>erreur 500</code> vient souvent d'un
+              dossier temporaire non inscriptible par le compte du pool&nbsp;: vérifiez les droits de
+              <code>/var/lib/phpmyadmin</code> et de son sous-dossier <code>tmp</code>.
+              <code>502 Bad Gateway</code> signifie que le socket PHP-FPM n'existe pas&nbsp;:
+              contrôlez que le pool est bien chargé et que le chemin du socket est identique dans les
+              deux fichiers. Adaptez <code>8.4</code> si votre <code>php -v</code> affiche une autre
+              version.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>502 Bad Gateway</code> sur phpMyAdmin</th>
+                  <td>Le socket PHP-FPM n'existe pas ou porte un autre nom</td>
+                  <td>Comparez <code>listen</code> du pool et <code>fastcgi_pass</code> de l'hôte</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>erreur 500</code> sur phpMyAdmin</th>
+                  <td>Dossier temporaire non inscriptible par le compte du pool</td>
+                  <td>Contrôlez les droits de <code>/var/lib/phpmyadmin</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Access denied for user</code> en SQL</th>
+                  <td>Mauvais compte, mauvais mot de passe, ou base d'une autre application</td>
+                  <td>Vérifiez le nom exact du compte et sa portée avec <code>SHOW GRANTS</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Can't connect to local server through socket</code></th>
+                  <td>MariaDB n'est pas démarrée</td>
+                  <td><code>systemctl status mariadb</code> puis <code>journalctl -u mariadb</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Le tunnel SSH refuse le port local</th>
+                  <td>Le port <code>8443</code> est déjà utilisé sur votre poste</td>
+                  <td>Choisissez un autre port local&nbsp;: <code>-L 9443:127.0.0.1:8443</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Un service apparaît sur une adresse publique</th>
+                  <td>Il n'a pas été lié à la boucle locale</td>
+                  <td>Corrigez son fichier de configuration, pas le pare-feu</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les sept points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Nginx, PHP-FPM, Python et Node.js sont installés, et leurs versions sont notées.</span></li>
+            <li><span>MariaDB est installée depuis les paquets Debian et liée à <code>127.0.0.1</code>.</span></li>
+            <li><span>Les trois bases <code>app_react</code>, <code>app_php</code> et <code>app_python</code> existent.</span></li>
+            <li><span>Six comptes SQL existent, chacun limité à sa base, sans aucun <code>GRANT ALL</code>.</span></li>
+            <li><span>Les six secrets sont enregistrés dans un gestionnaire de mots de passe, et nulle part dans une page web.</span></li>
+            <li><span>phpMyAdmin n'écoute que sur la boucle locale et n'est joignable que par tunnel SSH.</span></li>
+            <li><span>Le pare-feu n'a été modifié pour aucun de ces services internes.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 06 met les applications en ligne
+            <em>localement</em>&nbsp;: comptes distincts, services systemd, pool PHP-FPM dédié et
+            environnement virtuel Python.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 05</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S8</td><td>MariaDB — installation, utilisateurs, privilèges</td><td><code>https://mariadb.com/docs/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S9</td><td>phpMyAdmin — installation, <code>auth_type</code>, sécurité</td><td><code>https://docs.phpmyadmin.net/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S6</td><td>Nginx — documentation officielle</td><td><code>https://nginx.org/en/docs/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S13</td><td>Manuel PHP — PDO, configuration</td><td><code>https://www.php.net/manual/fr/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S14</td><td>Python — documentation et modules</td><td><code>https://docs.python.org/3/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S10b</td><td>Node.js — version LTS en cours</td><td><code>https://nodejs.org/en/download</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S3</td><td>Debian Handbook — paquets et services</td><td><code>https://www.debian.org/doc/manuals/debian-handbook/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S21</td><td>systemd — manuels (à consulter depuis un navigateur)</td><td><code>https://www.freedesktop.org/software/systemd/man/</code></td><td>HTTP 418 — non exploitable automatiquement</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">Les sorties de terminal de cette page sont décrites, non recopiées d'un serveur réel.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("05");
+  </script>
+</body>
+</html>

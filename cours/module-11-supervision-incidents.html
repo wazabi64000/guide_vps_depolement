@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 11 — Superviser et dépanner : lire journald et les journaux applicatifs, faire tourner les journaux avec logrotate, surveiller disque, mémoire, services et certificats, et appliquer une méthode de diagnostic en cinq étapes.">
+  <meta name="color-scheme" content="light">
+  <title>Module 11 — Superviser et dépanner · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Journaux</a>
+        <a href="#etape-5">Méthode</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 11 · Voir avant de réparer</p>
+      <h1 id="titre">Superviser et dépanner</h1>
+      <p class="lead">
+        Un serveur ne prévient pas&nbsp;: il écrit. Ce module apprend à lire ce qu'il écrit,
+        à faire tourner les journaux pour qu'ils restent lisibles, et à diagnostiquer un
+        incident sans improviser.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 11</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Outils natifs</span> systemd, journald, logrotate</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 06</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Ne redémarrez pas pour faire disparaître un symptôme.</strong> Un redémarrage
+        efface l'état qui explique la panne. Il est parfois nécessaire — mais toujours
+        <em>après</em> avoir noté ce que vous observiez, et jamais comme première réaction.
+      </div>
+      <div class="callout">
+        <strong>Aucun outil externe n'est nécessaire.</strong> Tout ce module utilise ce qui
+        est déjà installé&nbsp;: <code>systemd</code>, <code>journald</code>,
+        <code>logrotate</code>, les commandes système et les journaux propres à chaque
+        application. Une supervision «&nbsp;native&nbsp;» suffit largement pour trois
+        applications.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 11">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Savoir où regarder</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Lire un journal utilement</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Faire tourner les journaux</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Surveiller les signaux d'alerte</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Diagnostiquer un incident</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, vous savez où sont les journaux, comment en extraire
+              l'information utile, et dans quel ordre regarder quand quelque chose ne répond plus.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Localiser</strong> les journaux de chaque composant&nbsp;: systemd, Nginx, PHP-FPM, MariaDB, applications.</span></li>
+            <li><span><strong>Filtrer</strong> un journal par unité, par niveau et par période.</span></li>
+            <li><span><strong>Faire tourner</strong> les journaux fichiers, pour qu'ils ne remplissent jamais le disque.</span></li>
+            <li><span><strong>Contrôler</strong> disque, mémoire, services en échec et expiration des certificats.</span></li>
+            <li><span><strong>Appliquer</strong> une méthode de diagnostic au lieu d'essayer au hasard.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>Deux questions, toujours les mêmes.</strong> «&nbsp;Qu'est-ce qui a
+            changé&nbsp;?&nbsp;» et «&nbsp;qu'est-ce que le journal dit exactement&nbsp;?&nbsp;».
+            Neuf incidents sur dix se résolvent en répondant honnêtement à ces deux questions.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Superviser suppose que les services sont bien nommés et bien isolés.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 06&nbsp;: les services <code>app-react-api</code> et <code>app-python-web</code> existent, ainsi que les pools PHP-FPM.</span></li>
+            <li><span>Module 07&nbsp;: Nginx journalise chaque domaine dans son propre fichier.</span></li>
+            <li><span>Module 10&nbsp;: la sauvegarde est automatique — on ne dépanne pas sans filet.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>L'heure du serveur doit être juste.</strong> Des journaux à la mauvaise heure
+            rendent toute corrélation impossible. Vérifiez <code>timedatectl</code>&nbsp;: le
+            fuseau et la synchronisation doivent être corrects avant d'enquêter.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — où regarder                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Savoir où regarder</h2>
+            <p><strong>Objectif&nbsp;:</strong> ne plus chercher&nbsp;: connaître l'emplacement de chaque journal.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Où se trouve le journal de chaque composant</caption>
+              <thead>
+                <tr><th scope="col">Composant</th><th scope="col">Où lire</th><th scope="col">Ce qu'on y cherche</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Services systemd</th><td><code>journalctl -u &lt;unité&gt;</code></td><td>Démarrages, plantages, boucles de redémarrage</td></tr>
+                <tr><th scope="row">Tout le système</th><td><code>journalctl</code></td><td>Événements noyau, disque, mémoire, SSH</td></tr>
+                <tr><th scope="row">Nginx</th><td><code>/var/log/nginx/</code></td><td>Codes de réponse, erreurs de proxy, visiteurs</td></tr>
+                <tr><th scope="row">PHP-FPM</th><td><code>/var/log/php8.4-fpm.log</code></td><td>Erreurs fatales, démarrages du maître et des enfants</td></tr>
+                <tr><th scope="row">MariaDB</th><td><code>/var/log/mysql/</code> et <code>journalctl -u mariadb</code></td><td>Connexions refusées, requêtes lentes, arrêts brutaux</td></tr>
+                <tr><th scope="row">SSH</th><td><code>journalctl -u ssh</code></td><td>Tentatives d'authentification, refus de clé</td></tr>
+                <tr><th scope="row">Certificats</th><td><code>journalctl -u certbot</code></td><td>Échecs de renouvellement</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> vérifiez en une commande que le journal est bien conservé.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-journal-persist">Copier</button>
+            <pre id="cmd11-journal-persist">ls -d /var/log/journal
+journalctl --disk-usage
+timedatectl</pre>
+          </div>
+
+          <p>
+            Si <code>/var/log/journal</code> existe, les journaux systemd <strong>survivent au
+            redémarrage</strong>. S'il n'existe pas, ils vivent dans une zone temporaire et
+            disparaissent à chaque redémarrage&nbsp;: vous perdriez précisément la trace de
+            l'incident qui a provoqué le redémarrage.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>/var/log/journal</code> existe,
+              <code>--disk-usage</code> indique une taille cohérente avec l'activité du serveur,
+              et <code>timedatectl</code> affiche une synchronisation active.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>No such file or directory</code> sur
+              <code>/var/log/journal</code> signifie que la journalisation est volatile&nbsp;: créez
+              le dossier et redémarrez le service de journalisation, puis vérifiez à nouveau. Une
+              heure décalée se corrige avec <code>timedatectl set-timezone</code> et la
+              synchronisation réseau.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — lire un journal                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Lire un journal utilement</h2>
+            <p><strong>Objectif&nbsp;:</strong> passer de milliers de lignes à celles qui expliquent le problème.</p>
+          </div>
+
+          <p>
+            Un journal ne se lit pas du début. Il se <strong>filtre</strong>&nbsp;: par unité,
+            par niveau de gravité, et par période. Les niveaux vont de <code>debug</code> (tout)
+            à <code>emerg</code> (le système est inutilisable)&nbsp;; <code>warning</code> est un
+            bon point de départ, car il écarte le bruit sans masquer les avertissements.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> interrogez le journal d'une application.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-journalctl">Copier</button>
+            <pre id="cmd11-journalctl">journalctl -u app-react-api --since "1 hour ago" --no-pager
+journalctl -u app-react-api -p warning --no-pager -n 50
+journalctl -u app-python-web -b --no-pager -n 50
+journalctl -p err --since today --no-pager</pre>
+          </div>
+
+          <p>
+            <code>--no-pager</code> affiche le texte directement au lieu de l'ouvrir dans un
+            lecteur plein écran&nbsp;: indispensable quand vous copiez la sortie dans un rapport.
+            <code>-b</code> limite aux messages du démarrage en cours&nbsp;: après un redémarrage,
+            c'est le point de départ le plus utile. <code>-n 50</code> garde les cinquante
+            dernières lignes.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> contrôlez la place occupée et purgez si nécessaire.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-journal-purge">Copier</button>
+            <pre id="cmd11-journal-purge">journalctl --disk-usage
+sudo journalctl --vacuum-time=30d
+journalctl --disk-usage</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> vous obtenez une liste courte et lisible,
+              où chaque ligne porte une date, une unité et un niveau. Après la purge, la taille
+              affichée a diminué — sans jamais supprimer les journaux dont vous avez besoin pour
+              l'incident en cours.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une sortie vide signifie généralement que
+              l'unité n'existe pas sous ce nom&nbsp;: vérifiez avec
+              <code>systemctl list-units --type=service</code>. Les périodes s'écrivent en
+              anglais (<code>1 hour ago</code>, <code>today</code>, <code>yesterday</code>)&nbsp;:
+              une expression refusée n'affiche rien plutôt qu'une erreur, ce qui est trompeur.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Un journal peut contenir des données personnelles.</strong> Les journaux
+            Nginx contiennent les adresses IP des visiteurs, les journaux applicatifs peuvent
+            contenir des identifiants ou des corps de requête. Avant de transmettre un extrait de
+            journal, retirez ce qui n'est pas nécessaire au diagnostic.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — logrotate                                         -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Faire tourner les journaux</h2>
+            <p><strong>Objectif&nbsp;:</strong> qu'un journal ne remplisse jamais le disque.</p>
+          </div>
+
+          <p>
+            <code>journald</code> gère lui-même la taille de son journal. Mais Nginx, PHP-FPM et
+            MariaDB écrivent aussi dans des <em>fichiers</em>, qui grossissent indéfiniment&nbsp;:
+            c'est le rôle de <code>logrotate</code>, exécuté par une minuterie systemd.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> constatez d'abord ce qui est déjà configuré, plutôt que d'ajouter une règle en double.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-logrotate-existant">Copier</button>
+            <pre id="cmd11-logrotate-existant">ls -l /etc/logrotate.d/
+systemctl list-timers logrotate.timer --no-pager
+sudo logrotate -d /etc/logrotate.conf</pre>
+          </div>
+
+          <p>
+            La plupart des paquets Debian livrent déjà leur propre règle de rotation. Les recopier
+            créerait des règles concurrentes sur les mêmes fichiers. <code>logrotate -d</code> est
+            un <strong>essai à blanc</strong>&nbsp;: il affiche ce qu'il ferait, sans rien
+            modifier — l'outil parfait pour comprendre avant d'agir.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> si une de vos applications écrit un journal propre, ajoutez une règle dédiée.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-logrotate">Copier</button>
+            <pre id="cmd11-logrotate">/srv/apps/react-app/shared/app.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}</pre>
+          </div>
+
+          <p>
+            <code>rotate 8</code> conserve huit archives, puis supprime la plus ancienne&nbsp;;
+            <code>missingok</code> évite une erreur quand le fichier n'existe pas encore&nbsp;;
+            <code>notifempty</code> ne crée pas d'archive vide&nbsp;; <code>copytruncate</code>
+            vide le fichier sans exiger que l'application le rouvre — utile quand elle ne gère
+            pas les signaux de rotation.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> après avoir déposé le fichier dans
+              <code>/etc/logrotate.d/</code>, <code>sudo logrotate -d /etc/logrotate.conf</code>
+              affiche votre règle sans erreur de syntaxe.
+              <code>systemctl list-timers logrotate.timer</code> confirme que la rotation
+              automatique est bien planifiée.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une erreur de syntaxe empêche
+              <code>logrotate</code> de traiter <em>toutes</em> les règles, y compris celles des
+              autres composants&nbsp;: un journal cesse alors d'être tourné, et personne ne le
+              remarque avant que le disque ne se remplisse. Lancez toujours
+              <code>logrotate -d</code> après une modification.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — signaux d'alerte                                  -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Surveiller les signaux d'alerte</h2>
+            <p><strong>Objectif&nbsp;:</strong> repérer les problèmes avant qu'ils ne deviennent des pannes.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> passez une revue rapide, dans cet ordre.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-revue">Copier</button>
+            <pre id="cmd11-revue">systemctl --failed
+systemctl list-units --type=service --state=running --no-pager
+df -h /
+free -h
+uptime
+uptime -s</pre>
+          </div>
+
+          <p>
+            L'ordre compte&nbsp;: d'abord ce qui ne fonctionne <em>plus</em>
+            (<code>--failed</code>), puis ce qui fonctionne, puis les ressources.
+            <code>uptime -s</code> donne l'heure exacte du dernier démarrage&nbsp;: c'est le
+            repère qui permet de relier un problème à un redémarrage.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> surveillez ce qui ne se voit pas au premier coup d'œil.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd11-signaux">Copier</button>
+            <pre id="cmd11-signaux">systemctl show -p NRestarts app-react-api
+systemctl show -p MainPID -p ExecMainStatus app-python-web
+du -sh /srv/apps/*/releases
+sudo ss -lntup
+sudo nft list ruleset
+sudo certbot certificates</pre>
+          </div>
+
+          <p>
+            <code>NRestarts</code> est un indicateur précieux&nbsp;: un service qui affiche
+            plusieurs redémarrages tourne mal <em>sans être arrêté</em>. <code>du -sh</code> sur
+            les livraisons révèle une rétention qui ne s'applique pas.
+            <code>ss -lntup</code> et <code>nft list ruleset</code> se lisent
+            <strong>ensemble</strong>&nbsp;: un service visible en écoute doit être confronté aux
+            règles, <em>pour IPv4 et pour IPv6</em> — la même vérification que celle du
+            module&nbsp;03, à refaire régulièrement.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>systemctl --failed</code> ne retourne
+              rien, le disque garde une marge confortable, aucun service n'affiche un compteur de
+              redémarrages anormal, et les certificats affichent une échéance lointaine.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> un service en état <code>failed</code> se
+              diagnostique avec <code>journalctl -u &lt;unité&gt; -b</code>, puis
+              <code>systemctl status &lt;unité&gt;</code>. S'il redémarre en boucle, l'unité est
+              souvent trop permissive&nbsp;: activez une limite de tentatives pour que le système
+              cesse de réessayer et signale l'échec au lieu de le masquer.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — méthode                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Diagnostiquer un incident</h2>
+            <p><strong>Objectif&nbsp;:</strong> remplacer l'improvisation par une méthode reproductible.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Méthode de diagnostic en cinq étapes</caption>
+              <thead>
+                <tr><th scope="col">#</th><th scope="col">Étape</th><th scope="col">Question</th><th scope="col">Action</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">1</th><td><strong>Décrire</strong></td><td>Qu'est-ce qui ne marche pas, exactement&nbsp;?</td><td>Un symptôme observable&nbsp;: «&nbsp;le domaine A renvoie 502&nbsp;», pas «&nbsp;le serveur est cassé&nbsp;»</td></tr>
+                <tr><th scope="row">2</th><td><strong>Situer</strong></td><td>Depuis quand, et après quel changement&nbsp;?</td><td>Corréler avec <code>uptime -s</code>, un déploiement, une migration</td></tr>
+                <tr><th scope="row">3</th><td><strong>Isoler</strong></td><td>Quel composant est en cause&nbsp;?</td><td><code>--failed</code>, <code>ss -lntup</code>, puis le journal du composant concerné</td></tr>
+                <tr><th scope="row">4</th><td><strong>Corriger</strong></td><td>Quelle est la correction minimale&nbsp;?</td><td>Une modification à la fois, vérifiée immédiatement</td></tr>
+                <tr><th scope="row">5</th><td><strong>Consigner</strong></td><td>Que faudrait-il pour l'éviter&nbsp;?</td><td>Écrire le symptôme, la cause, la correction et le contrôle ajouté</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            L'étape 5 est celle que l'on saute systématiquement. Sans elle, le même incident
+            revient, et se rediagnostique à zéro. Consigner ne demande pas un rapport&nbsp;:
+            trois lignes dans un fichier suffisent.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>Une correction doit avoir un retour arrière.</strong> Avant de modifier une
+            configuration, notez ce que vous changez et comment revenir en arrière. Sur un
+            serveur dont vous n'êtes pas sûr, prenez la copie de sauvegarde <em>d'abord</em>&nbsp;:
+            c'est ce que le module 10 vous permet de faire en une minute.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> le symptôme a disparu, vous savez
+              <em>pourquoi</em> il était là, et une trace existe. Si vous ne pouvez pas expliquer
+              la cause, l'incident n'est pas résolu&nbsp;: il est en pause.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Limite de la méthode en cas d'attaque.</strong> Si les journaux montrent des
+            tentatives d'authentification massives, des requêtes anormales ou un trafic inhabituel,
+            vous n'êtes plus dans un incident ordinaire&nbsp;: n'effacez rien, conservez les
+            journaux, et traitez d'abord la fermeture de l'accès avant d'analyser.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Le service redémarre en boucle</th>
+                  <td>Configuration invalide, ou dépendance indisponible au démarrage</td>
+                  <td><code>journalctl -u &lt;unité&gt; -b</code>, corriger, puis limiter les tentatives</td>
+                </tr>
+                <tr>
+                  <th scope="row">Disque plein</th>
+                  <td>Journaux applicatifs non tournés, ou livraisons accumulées</td>
+                  <td><code>du -sh</code> sur les gros dossiers, règle <code>logrotate</code>, purge des livraisons</td>
+                </tr>
+                <tr>
+                  <th scope="row">Journaux absents après redémarrage</th>
+                  <td>Journalisation systemd non persistante</td>
+                  <td>Vérifier l'existence de <code>/var/log/journal</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Toutes les applications tombent en même temps</th>
+                  <td>Mémoire saturée, ou un composant partagé en cause</td>
+                  <td><code>free -h</code>, puis le journal du composant commun</td>
+                </tr>
+                <tr>
+                  <th scope="row">Une application inaccessible alors qu'elle écoute</th>
+                  <td>Le pare-feu, ou une écoute sur la mauvaise famille d'adresses</td>
+                  <td>Confronter <code>ss -lntup</code> et <code>nft list ruleset</code>, IPv4 et IPv6</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le journal est noyé par un service bavard</th>
+                  <td>Niveau de journalisation trop détaillé en production</td>
+                  <td>Relever le niveau du service concerné, pas celui de tout le système</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les neuf points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Vous savez où lire le journal de chaque composant, sans chercher.</span></li>
+            <li><span>Les journaux systemd survivent au redémarrage.</span></li>
+            <li><span>L'heure du serveur est juste et synchronisée.</span></li>
+            <li><span>Les journaux fichiers sont tournés, et <code>logrotate -d</code> ne signale aucune erreur.</span></li>
+            <li><span>La taille du journal systemd est bornée.</span></li>
+            <li><span><code>systemctl --failed</code> ne retourne rien.</span></li>
+            <li><span>Aucun service ne présente un compteur de redémarrages anormal.</span></li>
+            <li><span>L'expiration des certificats est surveillée.</span></li>
+            <li><span>La méthode en cinq étapes est connue, et la consignation est réellement pratiquée.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 12 rassemble tout&nbsp;: reconstruction
+            complète, vérifications finales et évaluation de ce que vous savez faire seul.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 11</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S3</td><td>Debian Handbook — administration, paquets, services</td><td><code>https://www.debian.org/doc/manuals/debian-handbook/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S5c</td><td>Debian — avis de sécurité</td><td><code>https://www.debian.org/security/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S19</td><td>OWASP — bonnes pratiques de sécurité applicative</td><td><code>https://cheatsheetseries.owasp.org/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S21</td><td>systemd — manuels (unités, journald, minuteries)</td><td><code>https://www.freedesktop.org/software/systemd/man/</code></td><td><strong>HTTP 418 — niveau B, insuffisante</strong></td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man journalctl</code> · <code>man logrotate</code> · <code>man systemctl</code> · <code>man nft</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">
+            La source S21 est classée <em>insuffisante</em> (l'environnement de rédaction reçoit un
+            HTTP 418, blocage anti-robot)&nbsp;: les options de <code>journalctl</code> et de
+            <code>systemctl</code> présentées ici doivent être confirmées par les pages
+            <code>man</code> du serveur. Les sorties de terminal sont décrites, non recopiées&nbsp;;
+            aucun journal de serveur réel n'a été consulté pour rédiger ce module.
+          </p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("11");
+  </script>
+</body>
+</html>

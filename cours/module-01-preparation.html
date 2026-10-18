@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 01 — Préparer son environnement : choisir entre un VPS et un serveur à domicile, installer ou préparer la machine, établir une connexion SSH vérifiée et relever les caractéristiques du serveur.">
+  <meta name="color-scheme" content="light">
+  <title>Module 01 — Préparer son environnement : VPS ou serveur à domicile · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-local">Commandes</a>
+        <a href="#self-hosting">Self-hosting</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 01 · Parcours VPS <em>ou</em> serveur à domicile</p>
+      <h1 id="titre">Préparer son environnement : VPS ou serveur à domicile</h1>
+      <p class="lead">
+        Avant d'installer quoi que ce soit, il faut une machine joignable et une connexion
+        maîtrisée. Ce module vous fait choisir votre parcours, préparer la machine, ouvrir une
+        session SSH vérifiée et relever ses caractéristiques.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 01</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Lecture seule</span> aucune modification du serveur</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Deux parcours</span> VPS ou domicile</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Avant de commencer.</strong> Toutes les commandes de ce module s'exécutent soit sur
+        <strong>votre poste local</strong>, soit sur une machine <strong>dont vous êtes
+        responsable</strong>. N'exécutez rien de cette page sur un serveur qui ne vous appartient
+        pas. Ce module <strong>ne modifie aucune configuration</strong> du serveur.
+      </div>
+      <div class="callout callout--warn">
+        <strong>Valeurs fictives.</strong> Les adresses de cette page sont réservées à la
+        documentation : <code>192.0.2.x</code> (IPv4, RFC 5737), <code>2001:db8::</code> (IPv6,
+        RFC 3849) et le domaine <code>exemple.fr</code> (RFC 2606). Remplacez-les par vos valeurs
+        réelles.
+      </div>
+      <div class="callout">
+        <strong>Aucune sortie réelle.</strong> Cette page ne contient la capture d'aucun serveur.
+        Les résultats sont <em>décrits</em>. Ce que vous verrez dépendra de votre offre, de votre
+        version de Debian et de votre matériel.
+      </div>
+    </section>
+
+    <!--
+      NOTE TECHNIQUE (défaut désormais corrigé dans le socle CSS)
+      `.layout { grid-template-columns: 1fr }` laissait à ses enfants leur taille
+      minimale automatique (`min-content`) : un contenu large et insécable élargissait
+      la piste au-delà de la place disponible et faisait déborder toute la page.
+      Correctif porté par le socle : `.layout > * { min-width: 0 }`
+      (assets/css/layout.css), qui rend la piste rétrécissable, et
+      `.checklist li { flex-wrap: wrap }` (assets/css/components.css).
+      `.checklist li` est un conteneur flex : le contenu de chaque puce reste un
+      enfant unique (`<span>`), qui se replie donc à l'intérieur de lui-même.
+      Plus aucun contournement local (style="min-width:0") n'est requis ici.
+    -->
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire (aside)                                                 -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 01">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#parcours">2. Choisir son parcours</a></span></li>
+              <li><span><a href="#prerequis">3. Prérequis</a></span></li>
+              <li><span><a href="#etape-local">4. Étape 1 — Poste local</a></span></li>
+              <li><span><a href="#etape-vps">5. Étape 2 — Parcours A : VPS</a></span></li>
+              <li><span><a href="#etape-domicile">6. Étape 3 — Parcours B : domicile</a></span></li>
+              <li><span><a href="#etape-ssh">7. Étape 4 — Première connexion SSH</a></span></li>
+              <li><span><a href="#etape-verifier">8. Étape 5 — Vérifier le serveur</a></span></li>
+              <li><span><a href="#self-hosting">9. Héberger chez soi : self-hosting</a></span></li>
+              <li><span><a href="#problemes">10. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">11. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <!-- ================================================================ -->
+      <!-- Contenu                                                          -->
+      <!-- ================================================================ -->
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, vous disposez d'une machine Debian&nbsp;13 joignable en SSH et
+              d'une fiche décrivant ses caractéristiques.
+            </p>
+          </div>
+
+          <ul class="checklist">
+            <li><span><strong>Choisir</strong> entre un VPS et un serveur installé chez vous.</span></li>
+            <li><span><strong>Préparer</strong> la machine et obtenir une adresse stable.</span></li>
+            <li><span><strong>Se connecter</strong> en SSH en vérifiant l'identité du serveur.</span></li>
+            <li><span><strong>Relever</strong> l'identité, les ressources, les adresses et les ports en écoute.</span></li>
+            <li><span><strong>Décider</strong> comment rendre la machine joignable, sans exposer de service interne.</span></li>
+          </ul>
+
+          <div class="callout callout--ok">
+            <strong>Ce module est en lecture seule.</strong> Les commandes présentées consultent
+            l'état du système ; aucune ne l'installe, ne l'ouvre ni ne le modifie.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Choisir son parcours                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="parcours" aria-labelledby="parcours-titre">
+          <div class="section__head">
+            <h2 id="parcours-titre">2. Choisir son parcours</h2>
+            <p>Les deux parcours mènent à la <strong>même architecture applicative</strong> ; ils ne se valent pas sur la disponibilité.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Comparaison des deux parcours</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Critère</th>
+                  <th scope="col">Parcours A — VPS</th>
+                  <th scope="col">Parcours B — à domicile</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Machine</th><td>Louée chez un hébergeur</td><td>Ordinateur, mini-PC ou machine virtuelle déjà possédé</td></tr>
+                <tr><th scope="row">Adresse</th><td>IP publique fournie</td><td>IP privée de la box, souvent variable</td></tr>
+                <tr><th scope="row">Accès depuis Internet</th><td>Immédiat (port 22 et suivants)</td><td>Uniquement après NAT, VPN ou tunnel</td></tr>
+                <tr><th scope="row">Électricité et connexion</th><td>Assurées par l'hébergeur</td><td>À votre charge : coupures, box, Wi-Fi</td></tr>
+                <tr><th scope="row">Sauvegardes</th><td>Snapshots de l'hébergeur (à vérifier, non garanties)</td><td>Entièrement à votre charge</td></tr>
+                <tr><th scope="row">Récupération après panne</th><td>Réinstallation possible depuis la console</td><td>Intervention physique sur la machine</td></tr>
+                <tr><th scope="row">Usage adapté</th><td>Publier un service accessible à tous</td><td>Apprendre, réseau local, accès privé par VPN</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Ne pas confondre.</strong> Un VPS et une machine domestique
+            <strong>n'offrent pas les mêmes garanties de disponibilité</strong>. Une coupure
+            d'électricité, une box qui redémarre ou une connexion saturée suffisent à rendre un
+            service domestique indisponible. Pour un service public, utilisez le parcours A.
+          </div>
+
+          <h3>Les deux parcours mènent à la même architecture</h3>
+          <p>
+            Quelle que soit la machine, la cible est identique : Nginx en point d'entrée HTTP/HTTPS,
+            trois applications indépendantes (React&nbsp;+&nbsp;Express, PHP&nbsp;+&nbsp;PDO,
+            FastAPI&nbsp;+&nbsp;Uvicorn), une base MariaDB locale, phpMyAdmin réservé à
+            l'administration, des comptes de déploiement séparés avec des clés SSH distinctes, des
+            services indépendants et une procédure de retour arrière.
+          </p>
+          <pre class="diagram" aria-label="Architecture cible commune aux deux parcours">
+                    INTERNET  (ou réseau local / VPN)
+                              │
+                              ▼
+                    Nginx  :80 / :443     ← seul point d'entrée
+                     │        │        │
+        React+Express │  PHP+PDO │  FastAPI+Uvicorn
+        127.0.0.1:3001│  via PHP-FPM│ 127.0.0.1:8000
+                     └────────┴────────┘
+                              ▼
+                    MariaDB (écoute locale uniquement)
+                              ▲
+                    phpMyAdmin (jamais exposé : tunnel SSH ou VPN)
+          </pre>
+          <p class="tag">Ce schéma est décrit, pas mesuré : il correspond au référentiel <code>docs/ARCHITECTURE.md</code>.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">3. Prérequis</h2>
+            <p>Réunissez ces éléments avant de commencer : la suite du module suppose qu'ils sont disponibles.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Un poste de travail (Windows, macOS ou Linux) avec un <strong>client SSH</strong>.</span></li>
+            <li><span><strong>Parcours A</strong> — un VPS Debian&nbsp;13 commandé, avec ses identifiants initiaux et l'accès à la console de secours.</span></li>
+            <li><span><strong>Parcours B</strong> — la machine à réutiliser, une clé USB de 2&nbsp;Go ou plus, et un câble réseau.</span></li>
+            <li><span>Un gestionnaire de mots de passe pour conserver les identifiants remis par l'hébergeur.</span></li>
+          </ul>
+          <div class="callout callout--danger">
+            <strong>Secrets.</strong> Les identifiants, mots de passe et clés privées ne se copient
+            <strong>jamais</strong> dans un dépôt Git, un message ou une capture d'écran. Le module 08
+            traite ce point en détail.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 1 — poste local                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-local" aria-labelledby="etape-local-titre">
+          <div class="section__head">
+            <h2 id="etape-local-titre">4. Étape 1 — Préparer votre poste local</h2>
+            <p><strong>Objectif&nbsp;:</strong> disposer d'un client SSH opérationnel et savoir où sont vos clés.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> ouvrez un terminal sur votre poste et exécutez les deux commandes ci-dessous.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">utilisateur : vous</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ssh-v">Copier</button>
+            <pre id="cmd-ssh-v">ssh -V</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ls-ssh">Copier</button>
+            <pre id="cmd-ls-ssh">ls -la ~/.ssh</pre>
+          </div>
+
+          <p>
+            <code>ssh -V</code> affiche la version du client. <code>ls -la ~/.ssh</code> montre vos
+            fichiers SSH : <code>known_hosts</code> mémorise l'empreinte des serveurs déjà
+            rencontrés. Relevez la version affichée : un client trop ancien peut refuser les
+            algorithmes récents du serveur.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>ssh -V</code> renvoie une ligne commençant
+              par <code>OpenSSH_</code>. <code>ls -la ~/.ssh</code> liste vos fichiers, ou indique
+              que le dossier n'existe pas encore — c'est normal avant votre première clé.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> « command not found » signifie que le client
+              SSH n'est pas installé (paquet <code>openssh-client</code> sous Debian/Ubuntu), ou que
+              la fonctionnalité OpenSSH n'est pas activée sous Windows.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 2 — parcours A : VPS                                  -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-vps" aria-labelledby="etape-vps-titre">
+          <div class="section__head">
+            <h2 id="etape-vps-titre">5. Étape 2 — Parcours A : obtenir un VPS Debian&nbsp;13</h2>
+            <p><strong>Objectif&nbsp;:</strong> disposer d'une adresse et d'identifiants pour se connecter.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> dans le panneau de votre hébergeur, puis en notant les informations dans votre gestionnaire de mots de passe :</p>
+          <ol class="checklist">
+            <li><span>Commandez (ou sélectionnez) un VPS et choisissez <strong>Debian&nbsp;13</strong> comme système.</span></li>
+            <li><span>Relevez l'<strong>adresse IP publique</strong> — et l'adresse IPv6 si l'offre en fournit une.</span></li>
+            <li><span>Relevez le <strong>nom d'utilisateur initial</strong> (souvent <code>debian</code>, parfois <code>root</code>) et le mode d'authentification (mot de passe ou clé).</span></li>
+            <li><span>Repérez l'<strong>accès à la console de secours</strong> (KVM/VNC du panneau) : c'est votre canal de vérification indépendant si SSH ne répond plus.</span></li>
+          </ol>
+
+          <p><strong>Commande&nbsp;:</strong> vérifiez que la machine répond depuis votre poste.</p>
+          <p><span class="tag">Poste local</span> <span class="tag">lecture seule</span></p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ping">Copier</button>
+            <pre id="cmd-ping">ping -c 3 192.0.2.10</pre>
+          </div>
+
+          <p>
+            Un ping qui ne répond pas <strong>ne prouve rien</strong> : de nombreux hébergeurs
+            filtrent ICMP. Le test décisif est la connexion SSH de l'étape&nbsp;4.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> l'IP publique et l'utilisateur initial sont notés,
+              et vous savez ouvrir la console de secours de l'hébergeur.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> aucune IP affichée → le VPS n'est pas encore
+              déployé, attendez la fin de l'installation. Identifiants jamais reçus → régénérez-les
+              ou ajoutez votre clé depuis le panneau de l'hébergeur, pas par un moyen détourné.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 3 — parcours B : domicile                             -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-domicile" aria-labelledby="etape-domicile-titre">
+          <div class="section__head">
+            <h2 id="etape-domicile-titre">6. Étape 3 — Parcours B : installer Debian&nbsp;13 chez soi</h2>
+            <p><strong>Objectif&nbsp;:</strong> obtenir une machine Debian&nbsp;13 joignable depuis votre réseau local, avec une adresse stable.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> préparez la machine, puis relevez son adresse.</p>
+          <ol class="checklist">
+            <li><span>Téléchargez l'image d'installation de Debian&nbsp;13 depuis <code>debian.org</code> et écrivez-la sur la clé USB.</span></li>
+            <li><span>Installez Debian en acceptant le partitionnement assisté et en créant votre compte utilisateur.</span></li>
+            <li><span>Branchez la machine en <strong>Ethernet</strong> plutôt qu'en Wi-Fi : un serveur reste plus stable en filaire.</span></li>
+            <li><span>Redémarrez, connectez-vous localement, puis relevez l'adresse obtenue.</span></li>
+          </ol>
+
+          <p><strong>Commande&nbsp;:</strong> identifiez l'adresse ainsi obtenue.</p>
+          <p><span class="tag">Sur le serveur domestique</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ip-br-address">Copier</button>
+            <pre id="cmd-ip-br-address">ip -br address</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ip-route">Copier</button>
+            <pre id="cmd-ip-route">ip route</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ip-br-link">Copier</button>
+            <pre id="cmd-ip-br-link">ip -br link</pre>
+          </div>
+
+          <p>
+            <code>ip -br address</code> donne l'adresse IP, <code>ip route</code> la passerelle (votre
+            box), <code>ip -br link</code> l'<strong>adresse MAC</strong> de l'interface. Pour rendre
+            l'adresse stable, le plus simple est une <strong>réservation DHCP</strong> dans
+            l'interface de la box : vous y associez cette adresse MAC à une adresse fixe.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>ip -br address</code> montre une adresse de
+              la plage privée — <code>192.168.x.x</code>, <code>10.x.x.x</code> ou
+              <code>172.16</code> à <code>172.31</code> (RFC&nbsp;1918) — et <code>ip route</code>
+              affiche une ligne <code>default via …</code>. Après un redémarrage, l'adresse doit
+              rester identique.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> l'adresse change à chaque redémarrage →
+              activez la réservation DHCP par adresse MAC dans la box. Aucune adresse du tout →
+              vérifiez le câble, puis l'interface réseau choisie pendant l'installation.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Domestique, mais hébergé.</strong> Un serveur à la maison dépend du courant et
+            de la box. Un onduleur limite les coupures brutales et la machine doit rester dans un
+            endroit ventilé.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 4 — première connexion SSH                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-ssh" aria-labelledby="etape-ssh-titre">
+          <div class="section__head">
+            <h2 id="etape-ssh-titre">7. Étape 4 — Première connexion SSH</h2>
+            <p><strong>Objectif&nbsp;:</strong> ouvrir une session SSH en vérifiant d'abord l'identité du serveur.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> comparez l'empreinte de la clé d'hôte, puis connectez-vous.</p>
+          <ol class="checklist">
+            <li><span>Obtenez l'empreinte de la clé d'hôte par un <strong>canal indépendant</strong> : la console de secours de l'hébergeur (parcours&nbsp;A), ou l'écran de la machine (parcours&nbsp;B).</span></li>
+            <li><span>Lancez la connexion depuis votre poste.</span></li>
+            <li><span>Comparez l'empreinte affichée à la première connexion avec celle relevée à l'étape&nbsp;1.</span></li>
+          </ol>
+
+          <p><strong>Commande&nbsp;:</strong> afficher l'empreinte <em>sur le serveur</em>, depuis la console.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-host-fingerprint">Copier</button>
+            <pre id="cmd-host-fingerprint">ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</pre>
+          </div>
+
+          <p><strong>Commande&nbsp;:</strong> se connecter depuis le poste local.</p>
+          <p><span class="tag">Poste local</span></p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ssh-connect">Copier</button>
+            <pre id="cmd-ssh-connect">ssh -p 22 debian@192.0.2.10</pre>
+          </div>
+
+          <p><strong>Commande&nbsp;:</strong> retrouver l'empreinte mémorisée après la connexion (facultatif).</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ssh-keyscan">Copier</button>
+            <pre id="cmd-ssh-keyscan">ssh-keyscan -t ed25519 192.0.2.10 | ssh-keygen -lf -</pre>
+          </div>
+
+          <p>
+            <code>ssh-keyscan</code> interroge le réseau : il montre la clé <em>telle qu'elle circule</em>,
+            il ne remplace donc pas la console de secours. Seule une empreinte relevée sur la machine
+            (ou sa console) permet de confirmer l'identité du serveur.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> vous arrivez sur un shell distant.
+              <code>whoami</code> affiche l'utilisateur attendu et <code>hostname</code> le nom du
+              serveur. L'empreinte acceptée correspond à celle relevée sur la machine.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong>
+              « <code>Permission denied</code> » → mauvais utilisateur, mauvais port, ou clé absente
+              du serveur. « <code>Connection timed out</code> » → le port 22 est filtré, ou l'adresse
+              est erronée. « <code>Connection refused</code> » → le service SSH n'écoute pas sur ce port.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Message « REMOTE HOST IDENTIFICATION HAS CHANGED ».</strong> Ne videz
+            <strong>jamais</strong> votre fichier <code>known_hosts</code> à l'aveugle et ne
+            désactivez <strong>jamais</strong> la vérification de la clé d'hôte (option
+            <code>StrictHostKeyChecking=no</code>). Vérifiez l'empreinte par la console de secours :
+            un changement peut venir d'une réinstallation légitime… ou d'une usurpation de serveur.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Étape 5 — vérifier le serveur                               -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-verifier" aria-labelledby="etape-verifier-titre">
+          <div class="section__head">
+            <h2 id="etape-verifier-titre">8. Étape 5 — Vérifier le serveur</h2>
+            <p><strong>Objectif&nbsp;:</strong> relever l'identité, les ressources et les ports, pour préparer les modules suivants.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> depuis la session SSH, exécutez les quatre groupes de commandes ci-dessous et notez les valeurs dans la fiche en fin de section.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-sys">Copier</button>
+            <pre id="cmd-sys">hostnamectl
+cat /etc/os-release
+uname -r
+id
+timedatectl</pre>
+          </div>
+          <p>Identité du système : nom d'hôte, distribution, noyau, utilisateur courant et horloge.</p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-ressources">Copier</button>
+            <pre id="cmd-ressources">free -h
+df -h
+nproc --all</pre>
+          </div>
+          <p>Ressources : mémoire et échange, occupation des disques, nombre de processeurs.</p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-reseau">Copier</button>
+            <pre id="cmd-reseau">ip -br address
+ip route
+ss -lntup</pre>
+          </div>
+          <p>Réseau : adresses, passerelle et ports en écoute.</p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd-services">Copier</button>
+            <pre id="cmd-services">systemctl list-units --type=service --state=running</pre>
+          </div>
+          <p>Services actifs au démarrage de la machine.</p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> la ligne <code>PRETTY_NAME</code> de
+              <code>/etc/os-release</code> mentionne bien <strong>Debian&nbsp;13</strong> et le nom
+              de code <code>trixie</code>. Une autre version signifie que la machine n'est pas celle
+              prévue : arrêtez-vous ici.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>IPv4 et IPv6.</strong> <code>ip -br address</code> affiche les deux familles, et
+            <code>ss -lntup</code> montre les écoutes sur <code>[::]</code>. <strong>Un port fermé en
+            IPv4 peut être ouvert en IPv6</strong> : examinez toujours les deux colonnes, et plus
+            tard les deux jeux de règles de pare-feu.
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>À propos de <code>ss -p</code>.</strong> La colonne des processus ne s'affiche en
+            entier qu'avec les privilèges suffisants ; sinon elle reste partiellement vide. Ce n'est
+            pas une anomalie.
+          </div>
+
+          <h3>Fiche serveur à compléter</h3>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Caractéristiques du serveur à relever et à conserver pour les modules suivants</caption>
+              <thead>
+                <tr><th scope="col">Information</th><th scope="col">Commande</th><th scope="col">Votre valeur</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Nom d'hôte</th><td><code>hostnamectl</code></td><td>…………</td></tr>
+                <tr><th scope="row">Version de Debian</th><td><code>cat /etc/os-release</code></td><td>…………</td></tr>
+                <tr><th scope="row">Version du noyau</th><td><code>uname -r</code></td><td>…………</td></tr>
+                <tr><th scope="row">Utilisateur et groupes</th><td><code>id</code></td><td>…………</td></tr>
+                <tr><th scope="row">Fuseau horaire</th><td><code>timedatectl</code></td><td>…………</td></tr>
+                <tr><th scope="row">Mémoire disponible</th><td><code>free -h</code></td><td>…………</td></tr>
+                <tr><th scope="row">Espace disque libre</th><td><code>df -h</code></td><td>…………</td></tr>
+                <tr><th scope="row">Processeurs</th><td><code>nproc --all</code></td><td>…………</td></tr>
+                <tr><th scope="row">Adresses IPv4 / IPv6</th><td><code>ip -br address</code></td><td>…………</td></tr>
+                <tr><th scope="row">Ports en écoute</th><td><code>ss -lntup</code></td><td>…………</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Self-hosting                                                -->
+        <!-- ============================================================== -->
+        <section class="section" id="self-hosting" aria-labelledby="self-hosting-titre">
+          <div class="section__head">
+            <h2 id="self-hosting-titre">9. Héberger chez soi : self-hosting</h2>
+            <p>
+              Héberger chez soi revient à administrer la même pile que sur un VPS. Ce qui change
+              complètement, c'est <strong>l'accès depuis Internet</strong> et la
+              <strong>disponibilité</strong>.
+            </p>
+          </div>
+
+          <h3>Les notions à connaître</h3>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sept notions du réseau et de l'hébergement à domicile</caption>
+              <thead>
+                <tr><th scope="col">Notion</th><th scope="col">En bref, et ce que cela change</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Adresse IP privée</th>
+                  <td>Adresse du réseau local, dans les plages réservées (RFC&nbsp;1918 : <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>). Joignable seulement depuis chez vous.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Adresse IP publique</th>
+                  <td>L'adresse vue depuis Internet : la seule que le monde extérieur peut viser.</td>
+                </tr>
+                <tr>
+                  <th scope="row">NAT</th>
+                  <td>La box traduit plusieurs appareils internes vers une seule IP publique. Un service interne reste donc invisible de l'extérieur sans règle explicite.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Redirection de port</th>
+                  <td>Associer un port public à un couple adresse et port interne. Cela ouvre un service précis : à limiter au strict nécessaire.</td>
+                </tr>
+                <tr>
+                  <th scope="row">DNS dynamique</th>
+                  <td>Un nom dont l'enregistrement suit une IP publique qui change. Évite de dépendre d'une adresse fixe, rare chez les particuliers.</td>
+                </tr>
+                <tr>
+                  <th scope="row">CGNAT</th>
+                  <td>L'opérateur partage une IP publique entre plusieurs abonnés (RFC&nbsp;6598 : <code>100.64.0.0/10</code>). La redirection de port IPv4 devient alors impossible.</td>
+                </tr>
+                <tr>
+                  <th scope="row">VPN</th>
+                  <td>Tunnel chiffré entre votre appareil et votre réseau. Le serveur redevient joignable « comme en local », sans être publié.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Trois façons d'y accéder</h3>
+          <p>Elles sont classées de la plus sûre à la plus exposée. Commencez par la première.</p>
+          <div class="grid">
+            <div class="card">
+              <h4>1. Réseau local uniquement</h4>
+              <p>Aucune règle sur la box, rien de publié. Convient pour apprendre et pour tester la pile complète.</p>
+              <p><strong>Vérification&nbsp;:</strong> depuis un autre appareil du réseau local, joignez le serveur par son adresse privée.</p>
+            </div>
+            <div class="card">
+              <h4>2. VPN</h4>
+              <p>Le serveur reste invisible depuis Internet ; votre appareil rejoint le réseau privé par un tunnel. Un VPN comme WireGuard convient à un accès distant privé.</p>
+              <p><strong>Vérification&nbsp;:</strong> sans tunnel, le service est injoignable ; avec le tunnel, il répond sur son adresse privée.</p>
+            </div>
+            <div class="card">
+              <h4>3. Publication web</h4>
+              <p>À n'envisager qu'après avoir vérifié, <strong>dans cet ordre</strong> : adresse IP publique réelle, NAT, redirection limitée, pare-feu de la machine, nom DNS, puis HTTPS.</p>
+              <p><strong>Vérification&nbsp;:</strong> contrôlez chaque point avant de passer au suivant. Aucun ne se suppose.</p>
+            </div>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>Ne publiez jamais sur Internet :</strong> MariaDB (<code>3306</code>), phpMyAdmin,
+            ni les ports internes des applications (<code>3001</code>, <code>8000</code>…). Ces
+            services s'administrent par <strong>tunnel SSH ou VPN</strong>. N'exposez pas non plus le
+            port <code>22</code> sans mesures adaptées (authentification par clé, filtrage,
+            limitation des tentatives).
+          </div>
+
+          <h3>Si votre opérateur utilise un CGNAT</h3>
+          <p>
+            <strong>Le reconnaître&nbsp;:</strong> si l'adresse WAN affichée par votre box se situe
+            dans <code>100.64.0.0/10</code> (RFC&nbsp;6598), vous êtes très probablement derrière un
+            CGNAT. Sinon, comparez l'adresse WAN de la box avec l'adresse publique vue depuis
+            Internet : si elles diffèrent, un NAT opérateur s'interpose.
+          </p>
+          <ul class="checklist">
+            <li><span><strong>IPv6 correctement filtré</strong> — de nombreux opérateurs fournissent une IPv6 publique. Dans ce cas, n'ouvrez que les ports nécessaires et vérifiez que les règles du pare-feu s'appliquent bien à IPv6.</span></li>
+            <li><span><strong>VPN avec point d'entrée accessible</strong> — le serveur n'est pas joignable directement ; le tunnel part d'un point que vous contrôlez.</span></li>
+            <li><span><strong>Tunnel sortant</strong> — le serveur établit lui-même une connexion vers un relais accessible depuis Internet.</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Aucune promesse.</strong> Une connexion résidentielle ne garantit pas qu'un
+            service public soit joignable. Vérifiez la faisabilité <em>avant</em> de réserver un nom
+            de domaine ou d'annoncer une adresse.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 10. Problèmes courants                                         -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">10. Problèmes courants</h2>
+            <p>Les huit difficultés les plus fréquentes à ce stade du parcours.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>Permission denied</code></th>
+                  <td>Mauvais utilisateur, mauvais port, ou clé absente du serveur (variante <code>publickey,password</code>)</td>
+                  <td>Vérifiez le nom d'utilisateur et le port dans le panneau de l'hébergeur</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Connection timed out</code></th>
+                  <td>Adresse erronée, port filtré, ou machine éteinte</td>
+                  <td>Testez l'adresse, puis le port, puis la console de secours</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Connection refused</code></th>
+                  <td>Le service SSH n'écoute pas sur ce port</td>
+                  <td>Confirmez le port réel dans le panneau ; utilisez la console de secours</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>Host key verification failed</code></th>
+                  <td>L'empreinte mémorisée ne correspond plus</td>
+                  <td>Comprenez la cause avant toute suppression : vérifiez par la console</td>
+                </tr>
+                <tr>
+                  <th scope="row">Message <code>REMOTE HOST IDENTIFICATION HAS CHANGED</code></th>
+                  <td>Clé d'hôte changée (réinstallation)… ou usurpation</td>
+                  <td>Ne contournez pas : comparez l'empreinte au canal indépendant</td>
+                </tr>
+                <tr>
+                  <th scope="row">L'adresse change après redémarrage (domicile)</th>
+                  <td>Aucune réservation DHCP</td>
+                  <td>Associez l'adresse MAC relevée par <code>ip -br link</code> à une adresse fixe dans la box</td>
+                </tr>
+                <tr>
+                  <th scope="row">Service injoignable depuis Internet, mais il fonctionne en local</th>
+                  <td>NAT, redirection absente, ou CGNAT</td>
+                  <td>Vérifiez l'adresse publique, puis la redirection ; comparez avec <code>100.64.0.0/10</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Coupures ou lenteurs aléatoires (domicile)</th>
+                  <td>Wi-Fi, box saturée, alimentation instable</td>
+                  <td>Passez en filaire, éloignez les services lourds d'une box modeste</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 11. Checklist finale                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">11. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les huit points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Par ordre : le parcours est choisi — <strong>A</strong> (VPS) ou <strong>B</strong> (domicile).</span></li>
+            <li><span>Le client SSH du poste local fonctionne (<code>ssh -V</code> répond).</span></li>
+            <li><span>Une session SSH est ouverte avec l'utilisateur et le port attendus.</span></li>
+            <li><span>L'empreinte de la clé d'hôte a été comparée à celle relevée sur la machine ou sa console.</span></li>
+            <li><span>La fiche serveur est complétée : nom, version de Debian, noyau, adresses, mémoire, disque.</span></li>
+            <li><span>Les ports en écoute sont notés, <strong>IPv4 et IPv6</strong>.</span></li>
+            <li><span>Aucun service nouveau n'a été publié sur Internet au cours de ce module.</span></li>
+            <li><span>Si vous hébergez chez vous : l'adresse locale est stable et le mode d'accès distant (local, VPN ou publication) est décidé.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 02 installe et administre Debian&nbsp;13 sur
+            cette machine : comptes, permissions, paquets et mises à jour.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 01</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S1</td><td>Console et offres VPS d'un hébergeur (exemple)</td><td><code>https://docs.ovhcloud.com/fr/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S1b</td><td>Offre VPS (page produit, exemple)</td><td><code>https://www.ovhcloud.com/fr/vps/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S22</td><td>RFC 1918 — adresses privées</td><td><code>https://www.rfc-editor.org/rfc/rfc1918</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S23</td><td>RFC 6598 — espace d'adressage partagé (CGNAT)</td><td><code>https://www.rfc-editor.org/rfc/rfc6598</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S24</td><td>Guide d'installation de Debian 13</td><td><code>https://www.debian.org/releases/trixie/installmanual</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S25</td><td>Configuration réseau sous Debian</td><td><code>https://wiki.debian.org/NetworkConfiguration</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S26</td><td>WireGuard — tunnel VPN</td><td><code>https://www.wireguard.com/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S5</td><td>Statut et dates de support de Debian 13</td><td><code>https://www.debian.org/releases/trixie/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S20</td><td>Manuel OpenSSH</td><td><code>https://www.openssh.com/manual.html</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>—</td><td>Valeurs fictives : RFC 5737 (IPv4), RFC 3849 (IPv6), RFC 2606 (domaines)</td><td><code>https://www.rfc-editor.org/rfc/rfc5737</code></td><td>HTTP 200 — consultée</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag" style="margin-top:1rem">Aucune sortie de terminal de cette page ne provient d'un serveur réel : les résultats sont décrits.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Progression locale                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>. Ce
+            n'est ni une certification ni une preuve de réussite : c'est une commodité pour
+            retrouver votre avancement.
+          </p>
+
+          <div class="progress" style="margin-top:1rem">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint" style="margin-top:.75rem">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- ==================================================================== -->
+  <!-- Script de page                                                        -->
+  <!-- Réutilise STRICTEMENT les modules existants : navigation.js et        -->
+  <!-- progress.js. Même clé localStorage, même source de vérité              -->
+  <!-- (modules.json). Aucun système de navigation ni de progression parallèle. -->
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <!-- ==================================================================== -->
+  <script type="module">
+    import { neighbours, moduleState, verifyPages } from "../assets/js/navigation.js";
+    import {
+      isCompleted, toggleCompleted, onProgressChange,
+      countCompleted, renderProgressBar, isStorageAvailable,
+    } from "../assets/js/progress.js";
+
+    const MODULE_ID = "01";
+    const DATA_URL = "../assets/data/modules.json";
+
+    /* --- 1. Sommaire replié sur petit écran (le contenu reste accessible) --- */
+    const toc = document.getElementById("toc");
+    if (toc && window.matchMedia("(max-width: 959px)").matches) {
+      toc.open = false;
+    }
+
+    /* --- 2. Boutons « Copier » --------------------------------------------- */
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.getAttribute("data-copy"));
+        if (!target) return;
+        const previous = button.textContent;
+        try {
+          await navigator.clipboard.writeText(target.textContent.trim());
+          button.textContent = "Copié";
+        } catch {
+          button.textContent = "Copie indisponible";
+        }
+        setTimeout(() => { button.textContent = previous; }, 1600);
+      });
+    });
+
+    /* --- 3. Progression locale -------------------------------------------- */
+    const doneBtn = document.getElementById("mark-done");
+    const hint = document.getElementById("mark-done-hint");
+    const barEl = document.getElementById("progress-bar-fill");
+    const labelEl = document.getElementById("progress-label");
+
+    // null tant que le plan des modules n'est pas chargé : dans ce cas on ne
+    // touche pas au libellé, qui reste « chargement » ou le message d'échec.
+    let modulesRef = null;
+
+    function refreshProgressBar() {
+      if (modulesRef === null) return;
+      renderProgressBar(barEl, labelEl, countCompleted(modulesRef), modulesRef.length);
+    }
+
+    function renderButtonState() {
+      if (!doneBtn) return;
+      const done = isCompleted(MODULE_ID);
+      doneBtn.textContent = done
+        ? "Marquer ce module comme non terminé"
+        : "Marquer ce module comme terminé";
+      doneBtn.setAttribute("aria-pressed", String(done));
+      doneBtn.disabled = false;
+    }
+
+    if (doneBtn && hint) {
+      if (!isStorageAvailable()) {
+        hint.textContent =
+          "Stockage local indisponible : la progression ne sera pas conservée après fermeture du navigateur.";
+      }
+      renderButtonState();
+      doneBtn.addEventListener("click", () => {
+        toggleCompleted(MODULE_ID);
+        renderButtonState();
+      });
+      // Le bouton ET la barre doivent suivre l'état : on s'abonne au même
+      // événement que celui utilisé par le tableau de bord.
+      onProgressChange(() => {
+        renderButtonState();
+        refreshProgressBar();
+      });
+    }
+
+    /* --- 4. Navigation entre modules (source : modules.json) -------------- */
+    async function initNavigation() {
+      let modules = [];
+      try {
+        const response = await fetch(DATA_URL, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!Array.isArray(data.modules)) throw new Error("structure inattendue");
+        modules = data.modules;
+      } catch {
+        // Pas de lien dynamique : le contenu et les liens statiques restent utilisables.
+        if (labelEl) labelEl.textContent = "Progression indisponible (plan des modules inaccessible)";
+        return;
+      }
+
+      // Un module n'est « disponible » que si sa page existe réellement.
+      // navigation.js est écrit pour la racine du site : les chemins `file`
+      // des modules y sont relatifs à la racine. Depuis `cours/`, on les
+      // préfixe par `../` pour que la vérification interroge la bonne URL.
+      const missing = await verifyPages(
+        modules.map((m) => (m.file ? { ...m, file: `../${m.file}` } : m))
+      );
+      const { previous, next } = neighbours(modules, MODULE_ID);
+
+      modulesRef = modules;
+      refreshProgressBar();
+
+      const nextEl = document.getElementById("module-next");
+      if (nextEl && next) {
+        const state = moduleState(next, { missing });
+        if (state.available) {
+          nextEl.replaceChildren();
+          const link = document.createElement("a");
+          link.className = "btn";
+          link.href = `../${next.file}`;
+          link.textContent = `Module ${next.id} — ${next.title}`;
+          nextEl.appendChild(link);
+        } else {
+          nextEl.textContent = `Module ${next.id} — ${next.title} : à venir`;
+        }
+      }
+
+      if (previous) {
+        const state = moduleState(previous, { missing });
+        if (state.available) {
+          const nav = document.querySelector('nav[aria-label="Navigation entre les modules"]');
+          if (nav) {
+            const link = document.createElement("a");
+            link.className = "btn secondary";
+            link.href = `../${previous.file}`;
+            link.textContent = `← Module ${previous.id} — ${previous.title}`;
+            nav.insertBefore(link, nav.firstChild);
+          }
+        }
+      }
+    }
+
+    initNavigation();
+  </script>
+</body>
+</html>

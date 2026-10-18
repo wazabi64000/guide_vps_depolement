@@ -1,0 +1,266 @@
+{
+  "course": "VPS Academy 2026",
+  "version": "1.0",
+  "generated": "2026-10-17",
+  "moduleCount": 12,
+  "modules": [
+    {
+      "id": "01",
+      "title": "Préparer son environnement : VPS ou serveur à domicile",
+      "slug": "preparer-environnement",
+      "file": "cours/module-01-preparation.html",
+      "description": "Choisir entre un VPS et un serveur hébergé à domicile, préparer la machine, établir une connexion SSH vérifiée et relever les caractéristiques du serveur.",
+      "objectives": [
+        "Choisir un parcours : VPS loué ou serveur hébergé à domicile",
+        "Préparer le poste local et obtenir une adresse stable pour la machine",
+        "Établir une première connexion SSH en vérifiant la clé d'hôte",
+        "Relever identité, ressources, adresses IPv4 et IPv6, et ports en écoute",
+        "Décider du mode d'accès distant sans exposer de service interne"
+      ],
+      "prerequisites": [
+        "Un poste de travail avec un client SSH",
+        "Parcours VPS : un VPS Debian 13 commandé et ses identifiants initiaux",
+        "Parcours domicile : une machine à réutiliser et une clé USB d'installation"
+      ],
+      "deliverables": [
+        "Un accès SSH fonctionnel et vérifié",
+        "Une fiche des caractéristiques du serveur et des ports en écoute"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "02",
+      "title": "Installer et administrer Debian 13",
+      "slug": "linux-permissions",
+      "file": "cours/module-02-linux-permissions.html",
+      "description": "Gérer utilisateurs, groupes, sudo, fichiers, permissions, umask et mises à jour APT sur Debian 13.",
+      "objectives": [
+        "Créer un compte administrateur nominatif et vérifier sudo",
+        "Lire et interpréter les permissions Unix (chmod, chown, umask)",
+        "Protéger un fichier sensible par des droits minimaux",
+        "Mettre à jour le système avec APT en sécurité"
+      ],
+      "prerequisites": [
+        "Module 01 : accès SSH opérationnel"
+      ],
+      "deliverables": [
+        "Un compte administrateur nominatif fonctionnel",
+        "Une convention de droits appliquée aux répertoires du projet"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "03",
+      "title": "Sécuriser SSH, les comptes et le pare-feu",
+      "slug": "ssh-root-parefeu",
+      "file": "cours/module-03-ssh-root-parefeu.html",
+      "description": "Durcir l'accès : authentification par clé, désactivation de root SSH, comptes de déploiement et pare-feu nftables, y compris pour un serveur hébergé à domicile.",
+      "objectives": [
+        "Générer et installer une clé SSH sans casser l'accès existant",
+        "Désactiver la connexion SSH directe de root en sécurité",
+        "Créer les comptes deploy-react, deploy-php et deploy-python sans sudo",
+        "Écrire un jeu de règles nftables ouvrant uniquement les ports nécessaires",
+        "Appliquer et vérifier ces règles en IPv4 comme en IPv6, y compris derrière une box"
+      ],
+      "prerequisites": [
+        "Module 02 : compte administrateur nominatif et sudo validés"
+      ],
+      "deliverables": [
+        "SSH durci par clé avec root SSH désactivé",
+        "Pare-feu actif, filtrant IPv4 et IPv6, avec procédure de retour arrière documentée"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "04",
+      "title": "Configurer le réseau, les domaines et l'accès distant",
+      "slug": "reseau-dns",
+      "file": "cours/module-04-reseau-dns.html",
+      "description": "Comprendre IP, ports et DNS, rattacher les sous-domaines, choisir un accès distant (redirection, VPN ou tunnel) et diagnostiquer la résolution, y compris derrière un NAT ou un CGNAT.",
+      "objectives": [
+        "Lire les interfaces réseau, les routes et les ports en écoute",
+        "Distinguer les enregistrements A, AAAA et CNAME",
+        "Rattacher trois sous-domaines à l'adresse IP du serveur",
+        "Choisir un mode d'accès distant adapté : redirection limitée, VPN ou tunnel sortant",
+        "Diagnostiquer une résolution DNS incorrecte"
+      ],
+      "prerequisites": [
+        "Module 01 : connaissance de l'adresse IP du serveur",
+        "Un nom de domaine et l'accès à sa zone DNS"
+      ],
+      "deliverables": [
+        "Trois sous-domaines résolvant vers le serveur",
+        "Une procédure de diagnostic réseau et DNS, et le mode d'accès distant documenté"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "05",
+      "title": "Installer Nginx, MariaDB et phpMyAdmin",
+      "slug": "stack-mariadb",
+      "file": "cours/module-05-stack-base-donnees.html",
+      "description": "Installer Node.js, Nginx, PHP-FPM, Python, MariaDB native Debian 13 et phpMyAdmin réservé au tunnel SSH.",
+      "objectives": [
+        "Installer et vérifier les runtimes (Node, PHP-FPM, Python et Uvicorn)",
+        "Installer MariaDB depuis les paquets Debian 13 et la lier à la boucle locale",
+        "Créer trois bases, trois utilisateurs d'exécution et trois utilisateurs de migration",
+        "Installer phpMyAdmin sans exposition publique et préparer l'accès par tunnel SSH"
+      ],
+      "prerequisites": [
+        "Modules 02 et 03 : système administré et durci"
+      ],
+      "deliverables": [
+        "Pile partagée installée (Nginx, MariaDB, runtimes, phpMyAdmin)",
+        "Trois bases et six utilisateurs SQL au moindre privilège"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "06",
+      "title": "Déployer React + Express, PHP et Python",
+      "slug": "deploiement-applications",
+      "file": "cours/module-06-deploiement-applications.html",
+      "description": "Déployer l'app React+Express, l'app PHP+PDO et l'app FastAPI+Uvicorn avec des comptes, services et configurations distincts.",
+      "objectives": [
+        "Publier le build React et lancer l'API Express via systemd",
+        "Configurer un pool PHP-FPM dédié à l'application PHP",
+        "Créer un environnement virtuel Python et lancer Uvicorn via systemd",
+        "Vérifier l'absence d'accès croisé entre les trois applications"
+      ],
+      "prerequisites": [
+        "Modules 04 et 05 : DNS configuré et pile installée"
+      ],
+      "deliverables": [
+        "Les trois applications servies localement (127.0.0.1) sur leurs ports dédiés",
+        "Trois services systemd et un pool PHP-FPM opérationnels"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "07",
+      "title": "Configurer Nginx et HTTPS",
+      "slug": "nginx-https",
+      "file": "cours/module-07-nginx-reverse-proxy-https.html",
+      "description": "Publier les trois applications derrière Nginx, configurer le reverse proxy, activer HTTPS avec Certbot et automatiser le renouvellement.",
+      "objectives": [
+        "Écrire un hôte Nginx par domaine avec les en-têtes de proxy adaptés",
+        "Obtenir un certificat Let's Encrypt avec Certbot",
+        "Forcer la redirection HTTP vers HTTPS",
+        "Vérifier le renouvellement automatique des certificats"
+      ],
+      "prerequisites": [
+        "Module 04 (DNS) et module 06 (applications opérationnelles)"
+      ],
+      "deliverables": [
+        "Trois domaines en HTTPS avec redirection",
+        "Renouvellement Certbot planifié et testé en simulation"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "08",
+      "title": "Organiser les dépôts Git et les versions",
+      "slug": "git-workflow",
+      "file": "cours/module-08-git-workflow.html",
+      "description": "Structurer les dépôts, les branches, les environnements et la gestion des secrets pour chaque application.",
+      "objectives": [
+        "Organiser un dépôt par application avec branches et conventions de commit",
+        "Séparer les environnements local, test, staging et production",
+        "Exclure les secrets du versionnement (.gitignore, fichiers d'exemple)",
+        "Faire relire une modification avant intégration"
+      ],
+      "prerequisites": [
+        "Module 06 : applications déployées"
+      ],
+      "deliverables": [
+        "Trois dépôts versionnés avec conventions documentées",
+        "Aucun secret présent dans l'historique Git"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "09",
+      "title": "Automatiser les déploiements avec CI/CD",
+      "slug": "cicd-rollback",
+      "file": "cours/module-09-cicd-automatisation.html",
+      "description": "Construire un pipeline par application (tests, build, déploiement, contrôle de santé) avec clé de déploiement dédiée et rollback.",
+      "objectives": [
+        "Écrire un pipeline de tests et de build pour React, PHP et FastAPI",
+        "Déployer sans privilèges administrateur via une clé dédiée",
+        "Gérer les migrations MariaDB de façon réversible",
+        "Déclencher et vérifier un retour arrière applicatif"
+      ],
+      "prerequisites": [
+        "Modules 07 et 08 : services en production et code versionné"
+      ],
+      "deliverables": [
+        "Un pipeline par application avec contrôle de santé",
+        "Une procédure de rollback documentée et testée en simulation"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "10",
+      "title": "Sauvegarder et restaurer",
+      "slug": "sauvegardes-restauration",
+      "file": "cours/module-10-sauvegardes-restauration.html",
+      "description": "Définir une stratégie de sauvegarde des fichiers, configurations et bases, l'automatiser puis la restaurer réellement.",
+      "objectives": [
+        "Sauvegarder une base MariaDB et restaurer une copie dans un environnement isolé",
+        "Sauvegarder les fichiers et configurations d'une application",
+        "Planifier la rétention et vérifier l'intégrité des sauvegardes",
+        "Documenter une procédure de reprise après incident"
+      ],
+      "prerequisites": [
+        "Module 05 (MariaDB) et module 06 (applications)"
+      ],
+      "deliverables": [
+        "Sauvegardes planifiées des trois applications",
+        "Une restauration vérifiée de bout en bout"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "11",
+      "title": "Superviser et dépanner",
+      "slug": "supervision-incidents",
+      "file": "cours/module-11-supervision-incidents.html",
+      "description": "Lire les journaux, surveiller les ressources, diagnostiquer les pannes et appliquer un protocole d'incident avec compte rendu.",
+      "objectives": [
+        "Lire les journaux système, Nginx, applicatifs et MariaDB",
+        "Surveiller CPU, mémoire, disque, ports et services",
+        "Diagnostiquer une indisponibilité à partir des symptômes",
+        "Rédiger un compte rendu d'incident structuré"
+      ],
+      "prerequisites": [
+        "Modules 06 et 07 : services en production"
+      ],
+      "deliverables": [
+        "Tableau de bord de supervision de base",
+        "Protocole de résolution d'incident documenté et appliqué"
+      ],
+      "status": "drafted"
+    },
+    {
+      "id": "12",
+      "title": "Réaliser le déploiement final des trois applications",
+      "slug": "projet-final",
+      "file": "cours/module-12-projet-final.html",
+      "description": "Rejouer l'intégralité du parcours, durcir la configuration, auditer le serveur et produire le dossier technique de production.",
+      "objectives": [
+        "Déployer les trois applications de bout en bout avec domaines et HTTPS",
+        "Réaliser un audit de sécurité des ports, services et permissions",
+        "Simuler un incident et restaurer le service",
+        "Documenter l'architecture et remettre le dossier technique"
+      ],
+      "prerequisites": [
+        "Modules 01 à 11 validés"
+      ],
+      "deliverables": [
+        "Trois applications en production, supervisées et sauvegardées",
+        "Dossier technique de production complet et audit final"
+      ],
+      "status": "drafted"
+    }
+  ]
+}

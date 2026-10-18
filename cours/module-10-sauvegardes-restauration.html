@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="fr" data-base="..">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Module 10 — Sauvegarder et restaurer : décider ce qui doit survivre, dumper les trois bases MariaDB, archiver les configurations et les secrets, automatiser par minuterie systemd, chiffrer, sortir les copies du serveur, et prouver la restauration sur une base de test.">
+  <meta name="color-scheme" content="light">
+  <title>Module 10 — Sauvegarder et restaurer · VPS Academy 2026</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="../index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation du module">
+        <a href="../index.html#modules">Tous les modules</a>
+        <a href="#objectif">Objectif</a>
+        <a href="#etape-2">Dump SQL</a>
+        <a href="#etape-5">Restaurer</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- ================================================================== -->
+    <!-- Bandeau                                                            -->
+    <!-- ================================================================== -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Module 10 · Ce qui doit survivre</p>
+      <h1 id="titre">Sauvegarder et restaurer</h1>
+      <p class="lead">
+        Tout le reste du parcours suppose que les données existent encore demain. Ce module
+        décide ce qui doit survivre, automatise les copies, les sort du serveur — et prouve
+        qu'elles sont restaurables.
+      </p>
+      <div class="status-legend">
+        <span class="status-legend__item"><span class="badge badge--published">Module 10</span></span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Sort de la machine</span> une copie qui n'y est pas ne survivra pas</span>
+        <span class="status-legend__item"><span class="badge badge--planned">Prérequis</span> module 05</span>
+      </div>
+      <div class="callout callout--danger">
+        <strong>Une sauvegarde jamais restaurée n'est pas une sauvegarde.</strong> C'est une
+        croyance. Tant que vous n'avez pas remis les données en place depuis la copie, vous
+        ne savez rien de son contenu, ni de sa lisibilité, ni de sa complétude.
+      </div>
+    </section>
+
+    <div class="layout layout--aside">
+
+      <!-- ================================================================ -->
+      <!-- Sommaire                                                         -->
+      <!-- ================================================================ -->
+      <aside class="layout__aside">
+        <details id="toc" open>
+          <summary>Sommaire du module</summary>
+          <nav aria-label="Sommaire du module 10">
+            <ul class="checklist">
+              <li><span><a href="#objectif">1. Objectif du module</a></span></li>
+              <li><span><a href="#prerequis">2. Prérequis</a></span></li>
+              <li><span><a href="#etape-1">3. Étape 1 — Décider ce qui doit survivre</a></span></li>
+              <li><span><a href="#etape-2">4. Étape 2 — Sauvegarder les trois bases</a></span></li>
+              <li><span><a href="#etape-3">5. Étape 3 — Archiver configurations et secrets</a></span></li>
+              <li><span><a href="#etape-4">6. Étape 4 — Automatiser, chiffrer, sortir du serveur</a></span></li>
+              <li><span><a href="#etape-5">7. Étape 5 — Restaurer pour de vrai</a></span></li>
+              <li><span><a href="#problemes">8. Problèmes courants</a></span></li>
+              <li><span><a href="#checklist">9. Checklist finale</a></span></li>
+              <li><span><a href="#sources">Sources</a></span></li>
+            </ul>
+          </nav>
+        </details>
+      </aside>
+
+      <div class="layout__main">
+
+        <!-- ============================================================== -->
+        <!-- 1. Objectif                                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="objectif" aria-labelledby="objectif-titre">
+          <div class="section__head">
+            <h2 id="objectif-titre">1. Objectif du module</h2>
+            <p>
+              À la fin de ce module, les données des trois applications quittent le serveur
+              chaque nuit, sous forme chiffrée, et vous avez déjà réussi à les remettre en place.
+            </p>
+          </div>
+          <ul class="checklist">
+            <li><span><strong>Lister</strong> ce qui est irremplaçable, et ce qui se reconstruit tout seul.</span></li>
+            <li><span><strong>Extraire</strong> chaque base MariaDB sans interrompre le service.</span></li>
+            <li><span><strong>Archiver</strong> les configurations et les fichiers de secrets.</span></li>
+            <li><span><strong>Automatiser</strong> par minuterie systemd, avec rétention.</span></li>
+            <li><span><strong>Prouver</strong> la restauration sur une base de test, puis nettoyer.</span></li>
+          </ul>
+          <div class="callout">
+            <strong>La règle des trois copies.</strong> Trois exemplaires, sur deux supports
+            différents, dont <strong>un hors du serveur</strong>. Un serveur qui sauvegarde
+            ses données sur son propre disque ne se sauvegarde pas&nbsp;: il les rassemble.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. Prérequis                                                   -->
+        <!-- ============================================================== -->
+        <section class="section" id="prerequis" aria-labelledby="prerequis-titre">
+          <div class="section__head">
+            <h2 id="prerequis-titre">2. Prérequis</h2>
+            <p>Trois éléments déjà en place rendent ce module possible.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>Module 05&nbsp;: les trois bases et leurs comptes existent, MariaDB n'écoute qu'en local.</span></li>
+            <li><span>Module 06&nbsp;: les fichiers d'environnement sont en <code>shared/</code>, lisible par le service uniquement.</span></li>
+            <li><span>Un espace de destination existe <em>en dehors</em> du serveur (machine personnelle, stockage distant, second serveur).</span></li>
+          </ul>
+          <div class="callout callout--warn">
+            <strong>Vérifiez l'espace disponible avant de commencer.</strong> Une sauvegarde qui
+            échoue faute de place laisse souvent un fichier tronqué à la place d'une erreur
+            visible&nbsp;: le pire des cas est une copie partielle qu'on croit complète.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 3. Étape 1 — décider                                           -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-1" aria-labelledby="etape-1-titre">
+          <div class="section__head">
+            <h2 id="etape-1-titre">3. Étape 1 — Décider ce qui doit survivre</h2>
+            <p><strong>Objectif&nbsp;:</strong> savoir, pour chaque élément, s'il se reconstruit ou s'il est unique.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Ce qui doit être sauvegardé, et ce qui se reconstruit</caption>
+              <thead>
+                <tr><th scope="col">Élément</th><th scope="col">Unique&nbsp;?</th><th scope="col">Pourquoi</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Les trois bases MariaDB</th>
+                  <td><strong>Oui</strong></td>
+                  <td>Données créées par les utilisateurs&nbsp;: irremplaçables</td>
+                </tr>
+                <tr>
+                  <th scope="row">Fichiers d'environnement <code>shared/.env</code></th>
+                  <td><strong>Oui</strong></td>
+                  <td>Mots de passe et clés&nbsp;: sans eux, l'application ne démarre pas</td>
+                </tr>
+                <tr>
+                  <th scope="row">Configurations serveur (Nginx, PHP-FPM, unités systemd)</th>
+                  <td><strong>Oui</strong></td>
+                  <td>Des heures de réglages&nbsp;: reproductibles, mais coûteux</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le code des applications</th>
+                  <td>Non</td>
+                  <td>Il vit dans Git (module&nbsp;08)&nbsp;: le dépôt <em>est</em> la copie</td>
+                </tr>
+                <tr>
+                  <th scope="row">Dépendances installées, caches, environnements virtuels</th>
+                  <td>Non</td>
+                  <td>Se réinstallent à partir des fichiers de dépendances</td>
+                </tr>
+                <tr>
+                  <th scope="row">Certificats TLS</th>
+                  <td>Presque</td>
+                  <td>Se réobtiennent avec Certbot, mais sauvegarder <code>/etc/letsencrypt</code> évite de retomber sur les limites de l'autorité</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> vous savez répondre à la question
+              «&nbsp;si le disque meurt maintenant, qu'est-ce que je ne peux plus reconstruire&nbsp;?&nbsp;»
+              et la liste tient en trois lignes.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <strong>Sauvegarder tout n'est pas sauvegarder bien.</strong> Copier des caches et
+            des dépendances multiplie le volume, allonge la durée, et rend la sauvegarde plus
+            difficile à restaurer. Ce qui compte, c'est l'<em>irremplaçable</em>.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. Étape 2 — dump SQL                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-2" aria-labelledby="etape-2-titre">
+          <div class="section__head">
+            <h2 id="etape-2-titre">4. Étape 2 — Sauvegarder les trois bases MariaDB</h2>
+            <p><strong>Objectif&nbsp;:</strong> obtenir un fichier SQL complet, sans bloquer les applications.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> créez le dossier de sauvegarde, puis extrayez la base de l'application A.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">lecture seule des données</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-dump-react">Copier</button>
+            <pre id="cmd10-dump-react">sudo install -d -m 750 -o root -g root /var/backups/mariadb
+mariadb-dump --single-transaction --routines --events \
+  -u migrate_react -p app_react | gzip > /tmp/app_react-$(date +%F).sql.gz
+ls -lh /tmp/app_react-$(date +%F).sql.gz</pre>
+          </div>
+
+          <p>
+            <code>--single-transaction</code> lit les tables InnoDB dans un état cohérent
+            <em>sans verrouiller</em> la base&nbsp;: les visiteurs continuent d'écrire pendant
+            l'extraction. <code>--routines</code> et <code>--events</code> incluent les
+            procédures et les tâches planifiées, que l'option par défaut omet. Le tube
+            <code>| gzip</code> compresse à la volée&nbsp;: le fichier intermédiaire en clair
+            n'existe jamais sur le disque.
+          </p>
+
+          <div class="callout callout--warn">
+            <strong>Le compte utilisé doit pouvoir lire.</strong> Le compte de migration porte
+            les droits de structure&nbsp;; vérifiez qu'il dispose aussi de <code>SELECT</code>
+            sur sa base&nbsp;:
+            <code>sudo mariadb -e "SHOW GRANTS FOR 'migrate_react'@'localhost';"</code>.
+            Si ce n'est pas le cas, n'ajoutez pas un compte d'administration SQL&nbsp;: ajustez
+            les droits de ce compte-ci, sur cette base uniquement.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> répétez pour les deux autres bases.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-dump-autres">Copier</button>
+            <pre id="cmd10-dump-autres">mariadb-dump --single-transaction --routines --events \
+  -u migrate_php -p app_php | gzip > /tmp/app_php-$(date +%F).sql.gz
+mariadb-dump --single-transaction --routines --events \
+  -u migrate_python -p app_python | gzip > /tmp/app_python-$(date +%F).sql.gz
+ls -lh /tmp/*.sql.gz</pre>
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> les trois fichiers existent, leur taille est
+              non nulle, et elle est <em>comparable</em> à celle du dump de la veille. Un fichier
+              qui passe de 40&nbsp;Mo à 2&nbsp;Ko signale une extraction vide, pas une base plus
+              légère.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>Access denied</code>&nbsp;: mauvais
+              compte ou mauvais mot de passe. <code>Unknown database</code>&nbsp;: nom de base
+              erroné, vérifiez avec <code>sudo mariadb -e "SHOW DATABASES;"</code>. Un fichier
+              vide avec <code>set -e</code>&nbsp;: le script continue alors que le dump a échoué —
+              c'est pour cela qu'on vérifie la taille.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. Étape 3 — configurations                                    -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-3" aria-labelledby="etape-3-titre">
+          <div class="section__head">
+            <h2 id="etape-3-titre">5. Étape 3 — Archiver configurations et secrets</h2>
+            <p><strong>Objectif&nbsp;:</strong> pouvoir reconstruire un serveur identique sans rien deviner.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> réunissez les fichiers qui décrivent votre serveur.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-config">Copier</button>
+            <pre id="cmd10-config">sudo install -d -m 750 /var/backups/config
+sudo tar czf /var/backups/config/config-$(date +%F).tar.gz \
+  /etc/nginx/sites-available \
+  /etc/php/8.4/fpm/pool.d \
+  /etc/mysql/mariadb.conf.d \
+  /etc/systemd/system/app-react-api.service \
+  /etc/systemd/system/app-python-web.service \
+  /etc/ssh/sshd_config \
+  /etc/letsencrypt \
+  /srv/apps/react-app/shared \
+  /srv/apps/php-app/shared \
+  /srv/apps/python-app/shared
+sudo tar tzf /var/backups/config/config-$(date +%F).tar.gz | head</pre>
+          </div>
+
+          <p>
+            <code>tar</code> retire le <code>/</code> initial des chemins&nbsp;: l'archive se
+            restaure donc <em>relativement</em> là où vous l'extrairez. C'est volontaire — et cela
+            signifie qu'une restauration se fait depuis la racine, en connaissance de cause.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>Cette archive contient vos secrets.</strong> Les fichiers
+            <code>shared/.env</code> portent des mots de passe, <code>/etc/letsencrypt</code>
+            porte une clé privée TLS. En clair, cette archive est aussi sensible que le serveur
+            lui-même&nbsp;: elle ne doit jamais être déposée sur un espace partagé ou un envoi
+            de fichiers public. Le chiffrement de l'étape 4 n'est pas une option.
+          </div>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>tar tzf</code> liste les chemins de
+              l'archive&nbsp;; vous y reconnaissez vos fichiers de configuration et vos trois
+              fichiers <code>.env</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>tar: Exiting with failure status
+              due to previous errors</code> accompagné de <code>Permission denied</code> signifie
+              qu'une commande <code>tar</code> a été lancée sans privilèges sur des fichiers
+              root. Sur Debian&nbsp;13, le chemin PHP exact est <code>/etc/php/8.4/</code>&nbsp;:
+              si votre version diffère, adaptez le chemin d'après <code>ls /etc/php/</code>.</p>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. Étape 4 — automatiser                                       -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-4" aria-labelledby="etape-4-titre">
+          <div class="section__head">
+            <h2 id="etape-4-titre">6. Étape 4 — Automatiser, chiffrer, sortir du serveur</h2>
+            <p><strong>Objectif&nbsp;:</strong> que la sauvegarde se fasse sans vous, et que la copie quitte la machine.</p>
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> écrivez le script exécuté par la minuterie.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-script">Copier</button>
+            <pre id="cmd10-script">#!/usr/bin/env bash
+# /usr/local/sbin/sauvegarde.sh — exécuté par root, chaque nuit
+set -euo pipefail
+
+DEST=/var/backups
+JOUR="$(date +%F)"
+
+for base in app_react app_php app_python; do
+  compte="migrate_${base#app_}"
+  mariadb-dump --single-transaction --routines --events \
+    --defaults-extra-file=/root/.sauvegarde.cnf "$base" \
+    | gzip > "$DEST/mariadb/${base}-${JOUR}.sql.gz"
+done
+
+tar czf "$DEST/config/config-${JOUR}.tar.gz" /etc/nginx/sites-available /srv/apps
+
+gpg --batch --yes --symmetric --cipher-algo AES256 \
+    --passphrase-file /root/.clef-sauvegarde \
+    --output "$DEST/config/config-${JOUR}.tar.gz.gpg" \
+    "$DEST/config/config-${JOUR}.tar.gz"
+rm -f "$DEST/config/config-${JOUR}.tar.gz"
+
+find "$DEST/mariadb" -name '*.sql.gz' -mtime +7 -delete
+find "$DEST/config" -name '*.gpg' -mtime +30 -delete</pre>
+          </div>
+
+          <p>
+            Le fichier <code>/root/.sauvegarde.cnf</code> (mode <code>600</code>, propriétaire
+            <code>root</code>) contient les identifiants sous forme de section
+            <code>[client]</code>&nbsp;: la minuterie n'a ainsi aucune invite à laquelle répondre.
+            <code>find -mtime +7 -delete</code> supprime les extractions de plus de sept jours&nbsp;:
+            sans cette purge, le disque se remplit et la sauvegarde finit par échouer en silence.
+          </p>
+
+          <div class="callout callout--danger">
+            <strong>La clé de chiffrement ne doit pas vivre sur la machine qu'elle protège.</strong>
+            Si <code>/root/.clef-sauvegarde</code> n'existe que sur le serveur, alors le jour où
+            le serveur disparaît, vous conservez des archives parfaitement illisibles. Copiez la
+            clé sur votre poste et dans un coffre de secrets, <em>avant</em> la première
+            sauvegarde chiffrée.
+          </div>
+
+          <p><strong>Action&nbsp;:</strong> déclarez la minuterie systemd, puis activez-la.</p>
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-service">Copier</button>
+            <pre id="cmd10-service">[Unit]
+Description=Sauvegarde des bases et des configurations
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/sauvegarde.sh</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-timer">Copier</button>
+            <pre id="cmd10-timer">[Unit]
+Description=Déclenche la sauvegarde chaque nuit
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</pre>
+          </div>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-enable-timer">Copier</button>
+            <pre id="cmd10-enable-timer">sudo systemctl daemon-reload
+sudo systemctl enable --now sauvegarde.timer
+systemctl list-timers sauvegarde.timer --no-pager
+sudo systemctl start sauvegarde.service
+sudo journalctl -u sauvegarde.service --no-pager -n 20</pre>
+          </div>
+
+          <p>
+            <code>Persistent=true</code> rattrape une exécution manquée&nbsp;: si le serveur était
+            éteint à 2&nbsp;h&nbsp;30, la sauvegarde se lance au redémarrage. La lancer une fois à
+            la main (<code>start</code>) permet de lire immédiatement les erreurs dans le journal
+            plutôt que de les découvrir trois semaines plus tard.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>list-timers</code> affiche la prochaine
+              exécution, et <code>journalctl -u sauvegarde.service</code> ne montre aucune erreur.
+              Contrôlez ensuite la <em>sortie réelle</em>&nbsp;: trois fichiers
+              <code>.sql.gz</code> du jour et une archive <code>.gpg</code>.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> une minuterie activée mais aucun fichier
+              produit se diagnostique dans <code>journalctl -u sauvegarde</code>. Un échec
+              silencieux est le principal danger&nbsp;: ajoutez un contrôle qui crie lorsqu'une
+              sauvegarde manque, plutôt que de compter sur votre mémoire.</p>
+          </div>
+
+          <p>
+            <strong>Enfin, sortez la copie du serveur.</strong> Transférez les fichiers vers une
+            machine que vous contrôlez, ou un stockage distant, avec <code>rsync</code> sur une
+            connexion chiffrée — jamais par un envoi de fichiers ouvert au public.
+          </p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. Étape 5 — restaurer                                         -->
+        <!-- ============================================================== -->
+        <section class="section" id="etape-5" aria-labelledby="etape-5-titre">
+          <div class="section__head">
+            <h2 id="etape-5-titre">7. Étape 5 — Restaurer pour de vrai</h2>
+            <p><strong>Objectif&nbsp;:</strong> remettre les données en place, sur une base de test, et vérifier leur contenu.</p>
+          </div>
+
+          <p>
+            Une restauration se fait <strong>sur une base de test</strong>, jamais directement sur
+            la production&nbsp;: si vous écrasez une base vivante avec une sauvegarde
+            incomplète, vous transformez une panne réparable en perte définitive.
+          </p>
+
+          <p><strong>Action&nbsp;:</strong> créez une base de travail, injectez le dump, contrôlez, puis nettoyez.</p>
+          <p><span class="tag">Sur le serveur</span> <span class="tag">base de test temporaire</span></p>
+
+          <div class="code-block">
+            <button class="code-block__copy" type="button" data-copy="cmd10-restore">Copier</button>
+            <pre id="cmd10-restore">sudo mariadb -e "DROP DATABASE IF EXISTS app_react_restauration;"
+sudo mariadb -e "CREATE DATABASE app_react_restauration;"
+zcat /var/backups/mariadb/app_react-$(date +%F).sql.gz \
+  | sudo mariadb app_react_restauration
+sudo mariadb -e "SHOW TABLES FROM app_react_restauration;"
+sudo mariadb -e "DROP DATABASE app_react_restauration;"</pre>
+          </div>
+
+          <p>
+            <code>sudo mariadb</code> suffit pour administrer le serveur local&nbsp;: sur Debian,
+            le compte <code>root</code> de MariaDB s'authentifie par le <strong>socket local</strong>,
+            sans mot de passe. C'est aussi pourquoi aucune administration SQL distante n'est
+            possible&nbsp;: il n'existe pas de <code>root</code> de MariaDB joignable par le
+            réseau. Les applications utilisent leurs trois comptes limités&nbsp;; vous, vous
+            passez par le socket.
+          </p>
+
+          <div class="callout callout--ok">
+            <p><strong>Vérification&nbsp;:</strong> <code>SHOW TABLES</code> liste bien vos
+              tables, sans erreur, et la restauration s'est terminée sans message. Comparez le
+              nombre de lignes d'une table connue entre production et restauration&nbsp;: le
+              contenu doit correspondre à la date de la sauvegarde.</p>
+          </div>
+
+          <div class="callout callout--warn">
+            <p><strong>En cas d'erreur&nbsp;:</strong> <code>ERROR 1046 (No database
+              selected)</code>&nbsp;: la base cible manque après le <code>|</code>. Un
+              <code>gzip: unexpected end of file</code> signale une archive tronquée&nbsp;: la
+              sauvegarde est inutilisable, et il faut le savoir <em>maintenant</em>, pas le jour
+              de l'incident. <code>ERROR 1044 (Access denied)</code>&nbsp;: vous n'utilisez pas
+              le socket local avec les droits d'administration.</p>
+          </div>
+
+          <div class="callout callout--danger">
+            <strong>L'exercice à refaire régulièrement&nbsp;:</strong> simuler la perte complète
+            d'un serveur et reconstruire les trois applications à partir des seuls dépôts Git,
+            des archives de configuration et des dumps. Tout ce qui manque à ce moment-là est
+            exactement ce que votre sauvegarde ne couvrait pas. Les cinq dernières livraisons
+            conservées (module&nbsp;06) complètent ce dispositif pour un retour arrière rapide.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 8. Problèmes courants                                          -->
+        <!-- ============================================================== -->
+        <section class="section" id="problemes" aria-labelledby="problemes-titre">
+          <div class="section__head">
+            <h2 id="problemes-titre">8. Problèmes courants</h2>
+            <p>Symptôme, cause probable, action.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Problèmes courants : symptôme, cause probable et action</caption>
+              <thead>
+                <tr><th scope="col">Symptôme</th><th scope="col">Cause probable</th><th scope="col">Que faire</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Aucun fichier produit dans la nuit</th>
+                  <td>La minuterie n'est pas active, ou le script échoue au premier pas</td>
+                  <td><code>systemctl list-timers</code> puis <code>journalctl -u sauvegarde</code></td>
+                </tr>
+                <tr>
+                  <th scope="row">Fichier de taille quasi nulle</th>
+                  <td>Extraction vide&nbsp;: mauvais nom de base, ou échec masqué</td>
+                  <td>Vérifiez le nom de la base et la présence de <code>SELECT</code> pour ce compte</td>
+                </tr>
+                <tr>
+                  <th scope="row">Le disque se remplit</th>
+                  <td>Purge absente ou trop permissive</td>
+                  <td>Contrôlez les règles de rétention et le volume de chaque extraction</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>gpg: decryption failed</code></th>
+                  <td>Mauvaise clé, ou archive corrompue</td>
+                  <td>Testez la clé conservée hors du serveur, avant d'en avoir besoin</td>
+                </tr>
+                <tr>
+                  <th scope="row">Restauration incomplète</th>
+                  <td>Le dump a été interrompu, ou les procédures et événements manquaient</td>
+                  <td>Réextrayez avec <code>--routines --events</code> et vérifiez la fin du fichier</td>
+                </tr>
+                <tr>
+                  <th scope="row">La sauvegarde contient des données personnelles en clair</th>
+                  <td>Archive non chiffrée déposée sur un espace partagé</td>
+                  <td>Retirez-la, considérez les données comme exposées, et chiffrez systématiquement</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 9. Checklist finale                                            -->
+        <!-- ============================================================== -->
+        <section class="section" id="checklist" aria-labelledby="checklist-titre">
+          <div class="section__head">
+            <h2 id="checklist-titre">9. Checklist finale</h2>
+            <p>Ce module est terminé lorsque les neuf points suivants sont vrais.</p>
+          </div>
+          <ul class="checklist">
+            <li><span>La liste de ce qui est irremplaçable est écrite et tient en trois lignes.</span></li>
+            <li><span>Les trois bases produisent une extraction quotidienne non vide.</span></li>
+            <li><span>Les configurations et les secrets sont archivés.</span></li>
+            <li><span>Les archives contenant des secrets sont chiffrées.</span></li>
+            <li><span>La clé de chiffrement existe <strong>hors</strong> du serveur.</span></li>
+            <li><span>Une copie des sauvegardes quitte le serveur.</span></li>
+            <li><span>La rétention est en place&nbsp;: sept extractions quotidiennes, un mois d'archives.</span></li>
+            <li><span>Une restauration a été réussie sur une base de test, puis nettoyée.</span></li>
+            <li><span>Un script de contrôle prévient lorsqu'une sauvegarde manque.</span></li>
+          </ul>
+          <div class="callout callout--ok">
+            <strong>Et ensuite&nbsp;?</strong> Le module 11 apprend à voir venir les problèmes&nbsp;:
+            lire les journaux, repérer un service qui boucle, et diagnostiquer avant l'incident.
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Sources                                                        -->
+        <!-- ============================================================== -->
+        <section class="section" id="sources" aria-labelledby="sources-titre">
+          <div class="section__head">
+            <h2 id="sources-titre">Sources</h2>
+            <p>Documentation consultée pour ce module. Statuts et niveaux de confiance : <code>docs/SOURCES.md</code>.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Sources consultées pour le module 10</caption>
+              <thead>
+                <tr><th scope="col">Réf.</th><th scope="col">Sujet</th><th scope="col">URL</th><th scope="col">Vérification (2026-10-17)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>S8</td><td>MariaDB — utilisateurs, privilèges, sauvegarde</td><td><code>https://mariadb.com/docs/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S2</td><td>Documentation officielle Debian</td><td><code>https://www.debian.org/doc/</code></td><td>HTTP 200 — consultée</td></tr>
+                <tr><td>S21</td><td>systemd — manuels (unités, minuteries)</td><td><code>https://www.freedesktop.org/software/systemd/man/</code></td><td><strong>HTTP 418 — niveau B, insuffisante</strong></td></tr>
+                <tr><td>—</td><td>Manuels installés sur la machine</td><td><code>man mariadb-dump</code> · <code>man tar</code> · <code>man gpg</code> · <code>man systemd.timer</code></td><td>Documentation locale, non distante</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tag">
+            La source S21 est classée <em>insuffisante</em> (l'environnement de rédaction reçoit un
+            HTTP 418, blocage anti-robot)&nbsp;: la syntaxe des unités et des minuteries présentée ici
+            doit être confirmée par <code>man systemd.timer</code> sur le serveur, ou depuis un navigateur
+            standard. Les sorties de terminal sont décrites, non recopiées d'un serveur réel&nbsp;;
+            aucune sauvegarde ni restauration n'a été exécutée pour rédiger ce module.
+          </p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- Terminer ce module                                             -->
+        <!-- ============================================================== -->
+        <section class="section" aria-labelledby="fin-titre">
+          <h2 id="fin-titre">Terminer ce module</h2>
+          <p>
+            Votre progression est enregistrée <strong>localement dans votre navigateur</strong>.
+            Ce n'est ni une certification ni une preuve de réussite.
+          </p>
+
+          <div class="progress">
+            <div class="progress__track">
+              <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+            </div>
+            <span class="progress__label" id="progress-label">Progression en cours de chargement</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" type="button" id="mark-done" disabled>Marquer ce module comme terminé</button>
+            <a class="btn secondary" href="../index.html#modules">Retour au sommaire du parcours</a>
+          </div>
+          <p class="tag" id="mark-done-hint">La progression s'enregistre localement dans votre navigateur.</p>
+
+          <noscript>
+            <div class="callout callout--warn">
+              <strong>JavaScript est désactivé.</strong> Le contenu de ce module reste
+              <strong>entièrement lisible</strong> : les étapes, les commandes et les tableaux
+              fonctionnent sans JavaScript. Seuls le bouton de progression et la navigation
+              dynamique entre modules sont inactifs.
+            </div>
+          </noscript>
+
+          <nav class="toolbar" aria-label="Navigation entre les modules">
+            <a class="btn secondary" href="../index.html">Sommaire du parcours</a>
+            <span id="module-next" class="tag">Module suivant : à venir</span>
+          </nav>
+        </section>
+
+      </div><!-- /.layout__main -->
+    </div><!-- /.layout -->
+
+    <footer class="site-footer">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </footer>
+  </main>
+
+  <!-- Sans JavaScript, le contenu reste lisible : ce script n'ajoute que des -->
+  <!-- commodités (copie, progression, navigation entre modules).             -->
+  <script type="module">
+    import { initModulePage } from "../assets/js/module-page.js";
+    initModulePage("10");
+  </script>
+</body>
+</html>

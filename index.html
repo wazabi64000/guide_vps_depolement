@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="fr" data-base=".">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VPS Academy 2026 — apprendre à administrer un VPS Debian 13, déployer trois applications (React + Express, PHP, FastAPI) et les sécuriser.">
+  <meta name="color-scheme" content="light">
+  <title>VPS Academy 2026 — Parcours en 12 modules</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6feb'/%3E%3Ctext x='16' y='22' font-family='system-ui,sans-serif' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="index.html">
+        <span class="brand__mark" aria-hidden="true">VPS</span>
+        VPS Academy&nbsp;2026
+      </a>
+      <nav class="header-nav" aria-label="Navigation principale">
+        <a href="#objectifs" data-page="objectifs">Objectifs</a>
+        <a href="#architecture" data-page="architecture">Architecture</a>
+        <a href="#modules" data-page="modules">Modules</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" class="wrap">
+
+    <!-- Bandeau ------------------------------------------------------------ -->
+    <section class="hero" aria-labelledby="titre">
+      <p class="eyebrow">Formation · édition 2026</p>
+      <h1 id="titre">Administrer, déployer et sécuriser un VPS Debian&nbsp;13</h1>
+      <p class="lead">
+        Un parcours en douze modules pour apprendre à héberger trois applications
+        indépendantes — React + Express, PHP + PDO, Python + FastAPI — sur un même
+        serveur, avec domaines, HTTPS, isolation des comptes, sauvegardes et supervision.
+      </p>
+      <div class="toolbar">
+        <a class="btn" href="#modules">Voir les douze modules</a>
+        <a class="btn secondary" href="#architecture">Comprendre l'architecture</a>
+      </div>
+      <div class="callout callout--warn">
+        <strong>Laboratoire uniquement.</strong> Les procédures du parcours s'exécutent sur
+        un VPS dont vous êtes responsable, ou sur un serveur de test. Aucune commande ne doit
+        être lancée sur une machine que vous n'administrez pas.
+      </div>
+    </section>
+
+    <!-- Objectifs ---------------------------------------------------------- -->
+    <section class="section" id="objectifs" aria-labelledby="objectifs-titre">
+      <div class="section__head">
+        <h2 id="objectifs-titre">Objectifs du parcours</h2>
+        <p>À la fin du parcours, l'apprenant sait :</p>
+      </div>
+      <ul class="grid grid--3" style="margin-top:1rem">
+        <li class="card"><h3>Administrer</h3><p>Se connecter, gérer utilisateurs, permissions et paquets sur Debian 13.</p></li>
+        <li class="card"><h3>Sécuriser</h3><p>Durcir SSH, appliquer le moindre privilège, filtrer les ports avec un pare-feu.</p></li>
+        <li class="card"><h3>Publier</h3><p>Configurer Nginx, le reverse proxy, les domaines et HTTPS avec Certbot.</p></li>
+        <li class="card"><h3>Déployer</h3><p>Héberger trois applications isolées avec leurs comptes, services et bases.</p></li>
+        <li class="card"><h3>Automatiser</h3><p>Mettre en place Git, la CI/CD, les migrations et le retour arrière.</p></li>
+        <li class="card"><h3>Exploiter</h3><p>Sauvegarder, restaurer, superviser et diagnostiquer les incidents.</p></li>
+      </ul>
+    </section>
+
+    <!-- Statistiques ------------------------------------------------------- -->
+    <section class="section" aria-label="État du parcours">
+      <div class="stats" id="stats">
+        <div class="stat"><div class="stat__value">12</div><div class="stat__label">modules au programme</div></div>
+        <div class="stat"><div class="stat__value">0 / 12</div><div class="stat__label">pages disponibles</div></div>
+        <div class="stat"><div class="stat__value">0 / 12</div><div class="stat__label">modules rédigés</div></div>
+        <div class="stat"><div class="stat__value">0 / 12</div><div class="stat__label">modules validés</div></div>
+        <div class="stat"><div class="stat__value">0 / 12</div><div class="stat__label">terminés (local)</div></div>
+      </div>
+      <p class="state-message" id="stats-fallback" hidden>
+        Les statistiques s'affichent après chargement des métadonnées des modules.
+      </p>
+    </section>
+
+    <!-- Architecture ------------------------------------------------------- -->
+    <section class="section" id="architecture" aria-labelledby="archi-titre">
+      <div class="section__head">
+        <h2 id="archi-titre">Architecture de référence</h2>
+        <p>Un point d'entrée public unique (Nginx), trois applications isolées, une base partagée.</p>
+      </div>
+
+      <pre class="diagram" aria-label="Schéma de l'architecture">
+                INTERNET
+                   │  :80 / :443
+                   ▼
+        ┌────────────────────────┐
+        │  Pare-feu (nftables)   │  seuls SSH, 80, 443 ouverts
+        └───────────┬────────────┘
+                    ▼
+        ┌────────────────────────┐
+        │         NGINX          │  un hôte par domaine + TLS
+        └──┬──────────┬───────┬──┘
+   app-react │  app-php │ app-python
+           ▼          ▼            ▼
+   React+Express    PHP+PDO    FastAPI+Uvicorn
+   127.0.0.1:3001   socket     127.0.0.1:8000
+           └──────────┴───────────┘
+                      ▼
+        ┌────────────────────────┐
+        │  MariaDB (local only)  │  app_react · app_php · app_python
+        └────────────────────────┘
+      </pre>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Domaines, ports et exposition des applications</caption>
+          <thead>
+            <tr><th scope="col">Application</th><th scope="col">Domaine d'exemple</th><th scope="col">Port / socket</th><th scope="col">Exposé publiquement</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>React + Express</td><td><code>app-react.exemple.fr</code></td><td><code>127.0.0.1:3001</code></td><td>Non (via Nginx seulement)</td></tr>
+            <tr><td>PHP + PDO</td><td><code>app-php.exemple.fr</code></td><td><code>/run/php/app-php.sock</code></td><td>Non (via Nginx seulement)</td></tr>
+            <tr><td>Python + FastAPI</td><td><code>app-python.exemple.fr</code></td><td><code>127.0.0.1:8000</code></td><td>Non (via Nginx seulement)</td></tr>
+            <tr><td>MariaDB</td><td>—</td><td><code>127.0.0.1:3306</code></td><td>Non</td></tr>
+            <tr><td>phpMyAdmin</td><td>—</td><td><code>127.0.0.1:8443</code></td><td>Non (tunnel SSH uniquement)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tag" style="margin-top:.5rem">exemple.fr est un domaine fictif de documentation.</p>
+    </section>
+
+    <!-- VPS ---------------------------------------------------------------- -->
+    <section class="section" aria-labelledby="vps-titre">
+      <div class="section__head">
+        <h2 id="vps-titre">Infrastructure visée</h2>
+        <p>Ordre de grandeur indicatif : les caractéristiques réelles se relèvent dans la console de l'hébergeur.</p>
+      </div>
+      <ul class="grid grid--3" style="margin-top:1rem">
+        <li class="card"><h3>Système</h3><p>Debian 13 « trixie » (version stable actuelle).</p></li>
+        <li class="card"><h3>Ressources</h3><p>Environ 2 vCores, 4 Go de RAM, 40 Go SSD (à vérifier selon l'offre).</p></li>
+        <li class="card"><h3>Socle partagé</h3><p>Nginx, MariaDB, phpMyAdmin (tunnel SSH), Certbot, systemd.</p></li>
+      </ul>
+    </section>
+
+    <!-- Modules ------------------------------------------------------------ -->
+    <section class="section" id="modules" aria-labelledby="modules-titre">
+      <div class="section__head">
+        <h2 id="modules-titre">Les douze modules</h2>
+        <p>
+          Chaque module affiche son état réel. Les pages de cours ne sont pas encore rédigées :
+          aucune n'apparaît disponible et <strong>aucun lien factice</strong> n'est proposé.
+        </p>
+      </div>
+
+      <div class="status-legend" aria-label="Légende des états de module">
+        <span class="status-legend__item"><span class="badge badge--planned">Planifié</span> aucune page</span>
+        <span class="status-legend__item"><span class="badge badge--published">Page disponible</span> page existante</span>
+        <span class="status-legend__item"><span class="badge badge--drafted">Rédigé</span> contenu complet</span>
+        <span class="status-legend__item"><span class="badge badge--validated">Validé</span> contrat de validation passé</span>
+      </div>
+
+      <div class="search-box" style="margin-top:1rem">
+        <label for="module-search">Rechercher un module</label>
+        <input class="search" id="module-search" type="search" placeholder="Ex. : SSH, DNS, MariaDB, rollback…" autocomplete="off" aria-describedby="search-status">
+        <span class="search-status" id="search-status" role="status" aria-live="polite"></span>
+      </div>
+
+      <div class="progress" style="margin-top:1.5rem">
+        <div class="progress__track">
+          <div class="progress__bar" id="progress-bar-fill" role="progressbar" aria-label="Progression locale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        </div>
+        <span class="progress__label" id="progress-label">0 / 12 modules terminés</span>
+        <button class="btn secondary" type="button" id="progress-reset">Réinitialiser</button>
+      </div>
+
+      <div class="grid" id="module-grid" aria-live="polite">
+        <p class="state-message">
+          Chargement du plan des modules… Si ce message persiste, le site est probablement
+          ouvert via <code>file://</code> : servez-le en HTTP (voir « Consulter le site en local »).
+        </p>
+      </div>
+      <noscript>
+        <p class="state-message">JavaScript est désactivé : le plan des modules ne peut pas être chargé.</p>
+      </noscript>
+    </section>
+
+    <!-- Note d'exécution locale -------------------------------------------- -->
+    <section class="section" aria-labelledby="run-titre">
+      <h2 id="run-titre">Consulter le site en local</h2>
+      <p>
+        Les métadonnées sont chargées par <code>fetch()</code>. Le site doit donc être servi en
+        HTTP : ouvrir <code>index.html</code> par un double-clic (<code>file://</code>) empêche le
+        chargement de <code>modules.json</code>.
+      </p>
+      <div class="code-block">
+        <button class="code-block__copy" type="button" data-copy="cmd-serve">Copier</button>
+        <pre id="cmd-serve">python3 -m http.server 8080</pre>
+      </div>
+      <p>Puis ouvrir <code>http://localhost:8080/</code> dans le navigateur.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>VPS Academy 2026 — support pédagogique statique (HTML, CSS, JavaScript natif). Aucun backend requis.</p>
+      <p>Référentiel technique : <code>docs/ARCHITECTURE.md</code> · Sources : <code>docs/SOURCES.md</code> · Cadrage : <code>docs/CADRAGE.md</code></p>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
